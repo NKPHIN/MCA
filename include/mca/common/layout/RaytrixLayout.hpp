@@ -141,6 +141,24 @@ namespace mca::MI {
             calculateRowCol();
             RaytrixLayout::calculateLayout();
         }
+
+        [[nodiscard]] int getMCAWidth(const float cropRatio) const override
+        {
+            int patch_size = static_cast<int>(diameter * cropRatio);
+            if (patch_size % 2 == 1) patch_size++;
+
+            if (rotation < std::numbers::pi / 4) return patch_size * rows;
+            else return patch_size * cols;
+        }
+
+        [[nodiscard]] int getMCAHeight(const float cropRatio) const override
+        {
+            int patch_size = static_cast<int>(diameter * cropRatio);
+            if (patch_size % 2 == 1) patch_size++;
+
+            if (rotation < std::numbers::pi / 4) return patch_size * cols;
+            else return patch_size * rows;
+        }
     };
     typedef std::shared_ptr<RaytrixLayout> raytrix_layout_ptr;
 };

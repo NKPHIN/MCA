@@ -23,8 +23,7 @@ add_executable(MCA src/main.cpp
         include/mca/common/layout/layout.hpp
         include/mca/common/layout/MI.hpp
         include/mca/common/cv/Rect.hpp
-        include/mca/proc/tspc.hpp
         include/mca/common/layout/TSPCLayout.hpp
         include/mca/common/layout/RaytrixLayout.hpp
-        include/mca/proc/raytrix.hpp
+        include/mca/proc/frame.hpp
 )
