@@ -30,11 +30,11 @@ namespace mca::MI {
                 cv::PointF start = ltop + offset_top_x * static_cast<float>(i);
                 cv::PointF end = lbot + offset_bot_x * static_cast<float>(i);
 
-                int odd_col_lens = rows;
-                if (!is_second_column_out && i % 2 == 1)
-                    odd_col_lens = rows - 1;
+                int len;
+                if (i % 2 == 0) len = first_col_rows;
+                else len = second_col_rows;
 
-                for (int j = 0; j < odd_col_lens; j++)
+                for (int j = 0; j < len; j++)
                 {
                     cv::PointF offset = (end - start) / static_cast<float>(rows - 1);
                     cv::PointF center = start + offset * static_cast<float>(j);
@@ -64,6 +64,9 @@ namespace mca::MI {
             rows = static_cast<int>((lbot_y - ltop_y) / diameter) + 1;
             cols = static_cast<int>((rtop_x - ltop_x) / (diameter * std::sqrt(3) / 2)) + 1;
 
+            first_col_rows = rows;
+            second_col_rows = rows - 1;
+
             // 第二行/列可能因为错位多出来一个
             if (rtop_x + diameter <= static_cast<float>(width))
             {
@@ -71,7 +74,7 @@ namespace mca::MI {
                 is_second_row_out = true;
             }
             if (lbot_y + diameter <= static_cast<float>(height))
-                is_second_column_out = true;
+                second_col_rows = rows;
 
             ltop = cv::PointF(ltop_x, ltop_y);
             rtop = cv::PointF(rtop_x, rtop_y);
@@ -119,8 +122,10 @@ namespace mca::MI {
         }
 
         ~TSPCLayout() override = default;
-        [[nodiscard]] bool isSecondColOut() const {return is_second_row_out;}
+        // [[nodiscard]] bool isSecondColOut() const {return is_second_row_out;}
     };
+
+    typedef std::shared_ptr<TSPCLayout> tspc_layout_ptr;
 }
 
 

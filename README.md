@@ -1,2 +1,2 @@
 # MCA
-Microimage Cropping and Aligning
+The latest implementation of *Microimage Cropping and Aligning*.

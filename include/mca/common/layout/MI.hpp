@@ -35,6 +35,9 @@ namespace mca::MI {
         int height = 0;
         float diameter = 0;
 
+        int first_col_rows = 0;
+        int second_col_rows = 0;
+
         std::vector<MicroImage> layout;
 
         void setMI(const int row, const int col, const cv::PointF center)
@@ -54,6 +57,9 @@ namespace mca::MI {
         [[nodiscard]] int getHeight() const {return height;}
         [[nodiscard]] float getDiameter() const {return diameter;}
 
+        [[nodiscard]] int getFirstColRows() const {return first_col_rows;}
+        [[nodiscard]] int getSecondColRows() const {return second_col_rows;}
+
         [[nodiscard]] int getMCAWidth(const float cropRatio) const
         {
             int patch_size = static_cast<int>(diameter * cropRatio);
@@ -69,6 +75,8 @@ namespace mca::MI {
             return patch_size * rows;
         }
     };
+
+    typedef std::shared_ptr<AbstractMILayout> layout_ptr;
 };
 
 #endif //MI_HPP

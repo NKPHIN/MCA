@@ -5,6 +5,9 @@ set(CMAKE_CXX_STANDARD 20)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
+# 解决 exe 无法直接运行的问题
+set(CMAKE_EXE_LINKER_FLAGS "-static")
+
 add_executable(MCA src/main.cpp
         include/mca.hpp
         include/mca/io/parser/argparser.hpp

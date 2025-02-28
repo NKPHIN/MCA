@@ -16,8 +16,6 @@ namespace mca::MI {
         float x_unit_offset;
         float y_unit_offset;
 
-        int first_col_rows = 0;
-        int second_col_rows = 0;
         cv::PointF col_header_offset;
 
         void calculateLeftTop()
@@ -143,10 +141,8 @@ namespace mca::MI {
             calculateRowCol();
             RaytrixLayout::calculateLayout();
         }
-
-        [[nodiscard]] int getFirstColRows() const {return first_col_rows;}
-        [[nodiscard]] int getSecondColRows() const {return second_col_rows;}
     };
+    typedef std::shared_ptr<RaytrixLayout> raytrix_layout_ptr;
 };
 
 #endif //RAYTRIXLAYOUT_HPP

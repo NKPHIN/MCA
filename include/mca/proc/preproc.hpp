@@ -6,6 +6,7 @@
 #define PREPROC_HPP
 
 #include <complex>
+#include <filesystem>
 
 #include "raytrix.hpp"
 #include "mca/common/cv/cv2.hpp"
@@ -13,6 +14,7 @@
 #include "mca/common/layout/layout.hpp"
 #include "tspc.hpp"
 
+namespace fs = std::filesystem;
 namespace mca::proc {
 
     inline void log(parser::ArgParser& arg_parser,
@@ -59,28 +61,63 @@ namespace mca::proc {
         }
     }
 
+    inline std::string get_ouput_path(int width, int height, int frames,
+        const fs::path& input_path, fs::path output_dir)
+    {
+        std::string input_file_name = input_path.stem().string();
+        const size_t firstUnderscorePos = input_file_name.find('_');
+
+        const std::string seq_name = input_file_name.substr(0, firstUnderscorePos);
+        const std::string output_file_name = seq_name + "_" + std::to_string(width) + "x" + std::to_string(height) + "_" +
+            std::to_string(frames) + "frames_8bit_yuv420.yuv";
+
+        output_dir.append(output_file_name);
+        return output_dir.string();
+    }
+
     inline void preproc(parser::ArgParser arg_parser,
         parser::ConfigParser& config_parser,
         parser::Calibration::CalibParser& calib_parser)
     {
         const std::string input_path = arg_parser.get("-i");
-        const std::string output_path = arg_parser.get("-o");
+        const std::string output_dir = arg_parser.get("-o");
 
+        std::string output_path;
         const int frames = std::stoi(config_parser.get("FramesToBeEncoded"));
         int width = std::stoi(config_parser.get("SourceWidth"));
         int height = std::stoi(config_parser.get("SourceHeight"));
 
         const float cropRatio = std::stof(arg_parser.get("-ratio"));
 
+        MI::layout_ptr layout;
+        if (calib_parser.type() == "TSPCCalibData")
+        {
+            layout = std::make_shared<MI::TSPCLayout>(width, height, calib_parser);
+            int MCA_width = layout->getMCAWidth(cropRatio);
+            int MCA_height = layout->getMCAHeight(cropRatio);
+            output_path = get_ouput_path(MCA_width, MCA_height, frames, input_path, output_dir);
+        }
+        else if (calib_parser.type() == "RayCalibData")
+        {
+            layout = std::make_shared<MI::RaytrixLayout>(width, height, calib_parser);
+            int MCA_width = layout->getMCAWidth(cropRatio);
+            int MCA_height = layout->getMCAHeight(cropRatio);
+
+            const float rotation = std::stof(calib_parser.search("rotation"));
+            if (rotation < std::numbers::pi / 4)
+                std::swap(MCA_width, MCA_height);
+            output_path = get_ouput_path(MCA_width, MCA_height, frames, input_path, output_dir);
+        }
+
+
         std::ifstream ifs(input_path, std::ios::binary);
         std::ofstream ofs(output_path, std::ios::binary);
-
         for (int i = 0; i < frames; i++)
         {
             cv::Mat_C3 YUV = cv::read(ifs, width, height);
             if (calib_parser.type() == "TSPCCalibData")
             {
-                mca::MI::TSPCLayout layout(width, height, calib_parser);
+                // mca::MI::TSPCLayout layout(width, height, calib_parser);
                 cv::Mat_C3 MCA_YUV = mca::proc::TSPC_PRE(YUV, layout, cropRatio);
                 cv::write(ofs, MCA_YUV);
             }
@@ -90,13 +127,14 @@ namespace mca::proc {
                 if (rotation < std::numbers::pi / 4)
                     YUV = cv::Transpose(YUV);
 
-                mca::MI::RaytrixLayout layout(width, height, calib_parser);
+                // mca::MI::RaytrixLayout layout(width, height, calib_parser);
                 cv::Mat_C3 MCA_YUV = mca::proc::Raytrix_Pre(YUV, layout, cropRatio);
 
                 if (rotation < std::numbers::pi / 4)
                     MCA_YUV = cv::Transpose(MCA_YUV);
                 cv::write(ofs, MCA_YUV);
             }
+            std::cout << (i+1) << std::endl;
         }
 
         ifs.close();

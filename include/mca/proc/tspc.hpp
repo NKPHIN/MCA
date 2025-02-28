@@ -11,29 +11,30 @@
 
 
 namespace  mca::proc {
-    inline cv::Mat_C3 TSPC_PRE(cv::Mat_C3& src, const MI::TSPCLayout& layout, const float cropRatio)
+    inline cv::Mat_C3 TSPC_PRE(cv::Mat_C3& src, const MI::layout_ptr& layout, const float cropRatio)
     {
-        const int rows = layout.getRows();
-        const int cols = layout.getCols();
-        const float diameter = layout.getDiameter();
+        const int rows = layout->getRows();
+        const int cols = layout->getCols();
+        const float diameter = layout->getDiameter();
 
         int patch_size = static_cast<int>(diameter * cropRatio);
         if (patch_size % 2 == 1) patch_size++;
 
         const int dst_width = patch_size * cols;
         const int dst_height = patch_size * rows;
-        std::cout << dst_width << "x" << dst_height << std::endl;
+        // std::cout << dst_width << "x" << dst_height << std::endl;
         cv::Mat_C3 dst = {cv::Mat(dst_height, dst_width),
             cv::Mat(dst_height, dst_width), cv::Mat(dst_height, dst_width)};
 
         for (int x = 0; x < cols; x++)
         {
-            int col_lens = rows;
-            if (!layout.isSecondColOut() && x % 2 == 1) col_lens--;
+            int lens;
+            if (x % 2 == 0) lens = layout->getFirstColRows();
+            else lens = layout->getSecondColRows();
 
-            for (int y = 0; y < col_lens; y++)
+            for (int y = 0; y < lens; y++)
             {
-                mca::MI::MicroImage mi = layout.getMI(y, x);
+                mca::MI::MicroImage mi = layout->getMI(y, x);
                 cv::PointF center = mi.getCenter();
 
                 const float offset = diameter * cropRatio / 2;
@@ -71,10 +72,11 @@ namespace  mca::proc {
 
         for (int x = 0; x < cols; x++)
         {
-            int col_lens = rows;
-            if (!layout.isSecondColOut() && x % 2 == 1) col_lens--;
+            int lens;
+            if (x % 2 == 0) lens = layout.getFirstColRows();
+            else lens = layout.getSecondColRows();
 
-            for (int y = 0; y < col_lens; y++)
+            for (int y = 0; y < lens; y++)
             {
                 mca::MI::MicroImage mi = layout.getMI(y, x);
                 cv::PointF center = mi.getCenter();

@@ -10,21 +10,21 @@
 
 
 namespace mca::proc {
-    inline cv::Mat_C3 Raytrix_Pre(cv::Mat_C3& src, const MI::RaytrixLayout& layout, const float cropRatio)
+    inline cv::Mat_C3 Raytrix_Pre(cv::Mat_C3& src, const MI::layout_ptr& layout, const float cropRatio)
     {
-        const int rows = layout.getRows();
-        const int cols = layout.getCols();
-        const int diameter = static_cast<int>(layout.getDiameter());
+        const int rows = layout->getRows();
+        const int cols = layout->getCols();
+        const int diameter = static_cast<int>(layout->getDiameter());
         const int patch_size = static_cast<int>(diameter * cropRatio);
 
         const int dst_width = patch_size * cols;
         const int dst_height = patch_size * rows;
-        std::cout << dst_width << "x" << dst_height << std::endl;
+        // std::cout << dst_width << "x" << dst_height << std::endl;
         cv::Mat_C3 dst = {cv::Mat(dst_height, dst_width),
             cv::Mat(dst_height, dst_width), cv::Mat(dst_height, dst_width)};
 
-        int first_col_rows = layout.getFirstColRows();
-        int second_col_rows = layout.getSecondColRows();
+        int first_col_rows = layout->getFirstColRows();
+        int second_col_rows = layout->getSecondColRows();
 
         for (int x = 0; x < cols; x++)
         {
@@ -34,7 +34,7 @@ namespace mca::proc {
 
             for (int y = 0; y < len; y++)
             {
-                mca::MI::MicroImage mi = layout.getMI(y, x);
+                mca::MI::MicroImage mi = layout->getMI(y, x);
                 cv::PointF center = mi.getCenter();
 
                 const float offset = diameter * cropRatio / 2;
