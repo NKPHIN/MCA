@@ -43,6 +43,12 @@ namespace mca::cv {
                 throw std::invalid_argument("Error: Scalar cannot be zero!");
             return Point(x / scalar, y / scalar);
         }
+
+        bool operator==(const Point & value)
+        {
+            if (this->x == value.getX() && this->y == value.getY()) return true;
+            else return false;
+        }
     };
 
     typedef mca::cv::Point<int> PointI;

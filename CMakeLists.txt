@@ -7,6 +7,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 
 # 解决 exe 无法直接运行的问题
 set(CMAKE_EXE_LINKER_FLAGS "-static")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 
 add_executable(MCA src/main.cpp
         include/mca.hpp
@@ -26,4 +27,5 @@ add_executable(MCA src/main.cpp
         include/mca/common/layout/TSPCLayout.hpp
         include/mca/common/layout/RaytrixLayout.hpp
         include/mca/proc/frame.hpp
+        include/mca/proc/padding.hpp
 )

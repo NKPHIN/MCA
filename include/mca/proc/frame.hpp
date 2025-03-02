@@ -5,6 +5,7 @@
 #ifndef FRAME_HPP
 #define FRAME_HPP
 
+#include "padding.hpp"
 #include "mca/common/cv/cv2.hpp"
 #include "mca/common/layout/MI.hpp"
 
@@ -60,7 +61,12 @@ namespace mca::proc {
                     std::swap(srcRoi, dstRoi);
 
                 for (int c = 0; c < 3; c++)
+                {
                     cv::copyTo(src[c], dst[c], srcRoi, dstRoi);
+                    if (mode == proc::POST)
+                        mca::proc::default_padding(dst[c], center, dstRoi, diameter);
+                }
+                // std::cout << "Finish one patch" << std::endl;
             }
         }
         return dst;

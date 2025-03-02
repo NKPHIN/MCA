@@ -45,6 +45,11 @@ namespace mca::cv {
             return data[row * cols + col];
         }
 
+        void set(const int row, const int col, const char value)
+        {
+            data[row * cols + col] = value;
+        }
+
         [[nodiscard]] bool contains(Point<int> p) const
         {
             int x = p.getX();
