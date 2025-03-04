@@ -142,18 +142,16 @@ namespace mca::MI {
             RaytrixLayout::calculateLayout();
         }
 
-        [[nodiscard]] int getMCAWidth(const float cropRatio) const override
+        [[nodiscard]] int getMCAWidth(int patch_size) const override
         {
-            int patch_size = static_cast<int>(diameter * cropRatio);
             if (patch_size % 2 == 1) patch_size++;
 
             if (rotation < std::numbers::pi / 4) return patch_size * rows;
             else return patch_size * cols;
         }
 
-        [[nodiscard]] int getMCAHeight(const float cropRatio) const override
+        [[nodiscard]] int getMCAHeight(int patch_size) const override
         {
-            int patch_size = static_cast<int>(diameter * cropRatio);
             if (patch_size % 2 == 1) patch_size++;
 
             if (rotation < std::numbers::pi / 4) return patch_size * cols;

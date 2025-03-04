@@ -29,7 +29,7 @@ namespace mca::proc {
             ofs << "Frames:" << config_parser.get("FramesToBeEncoded") << std::endl;
             ofs << "Width:" << config_parser.get("SourceWidth") << std::endl;
             ofs << "Height:" << config_parser.get("SourceHeight") << std::endl;
-            ofs << "Ratio:" << arg_parser.get("-ratio") << std::endl;
+            ofs << "Patch:" << arg_parser.get("-patch") << std::endl;
 
             ofs << "diameter:" << calib_parser.search("diameter") << std::endl;
             ofs << "ltopx:" << calib_parser.search("ltop", "x") << std::endl;
@@ -50,7 +50,7 @@ namespace mca::proc {
             ofs << "Frames:" << config_parser.get("FramesToBeEncoded") << std::endl;
             ofs << "Width:" << config_parser.get("SourceWidth") << std::endl;
             ofs << "Height:" << config_parser.get("SourceHeight") << std::endl;
-            ofs << "Ratio:" << arg_parser.get("-ratio") << std::endl;
+            ofs << "Patch:" << arg_parser.get("-patch") << std::endl;
 
             ofs << "diameter:" << calib_parser.search("diameter") << std::endl;
             ofs << "rotation:" << calib_parser.search("rotation") << std::endl;
@@ -85,7 +85,7 @@ namespace mca::proc {
         int width = std::stoi(config_parser.get("SourceWidth"));
         int height = std::stoi(config_parser.get("SourceHeight"));
 
-        const float cropRatio = std::stof(arg_parser.get("-ratio"));
+        const int patch_size = std::stoi(arg_parser.get("-patch"));
 
         float rotation = 1;
         MI::layout_ptr layout;
@@ -97,8 +97,8 @@ namespace mca::proc {
         else if (calib_parser.type() == "TSPCCalibData")
             layout = std::make_shared<MI::TSPCLayout>(width, height, calib_parser);
 
-        int MCA_width = layout->getMCAWidth(cropRatio);
-        int MCA_height = layout->getMCAHeight(cropRatio);
+        int MCA_width = layout->getMCAWidth(patch_size);
+        int MCA_height = layout->getMCAHeight(patch_size);
         output_path = get_ouput_path(MCA_width, MCA_height, frames, input_path, output_dir, "pre");
 
         std::ifstream ifs(input_path, std::ios::binary);
@@ -109,7 +109,7 @@ namespace mca::proc {
             if (rotation < std::numbers::pi / 4)
                 YUV = cv::Transpose(YUV);
 
-            cv::Mat_C3 MCA_YUV = proc::single_frame(YUV, layout, cropRatio, proc::PRE);
+            cv::Mat_C3 MCA_YUV = proc::single_frame(YUV, layout, patch_size, proc::PRE);
             if (rotation < std::numbers::pi / 4)
                 MCA_YUV = cv::Transpose(MCA_YUV);
             cv::write(ofs, MCA_YUV);

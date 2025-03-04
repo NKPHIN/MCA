@@ -60,17 +60,14 @@ namespace mca::MI {
         [[nodiscard]] int getFirstColRows() const {return first_col_rows;}
         [[nodiscard]] int getSecondColRows() const {return second_col_rows;}
 
-        [[nodiscard]] virtual int getMCAWidth(const float cropRatio) const
+        [[nodiscard]] virtual int getMCAWidth(int patch_size) const
         {
-            int patch_size = static_cast<int>(diameter * cropRatio);
             if (patch_size % 2 == 1) patch_size++;
-
             return patch_size * cols;
         }
 
-        [[nodiscard]] virtual int getMCAHeight(const float cropRatio) const
+        [[nodiscard]] virtual int getMCAHeight(int patch_size) const
         {
-            int patch_size = static_cast<int>(diameter * cropRatio);
             if (patch_size % 2 == 1) patch_size++;
             return patch_size * rows;
         }

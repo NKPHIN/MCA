@@ -18,7 +18,7 @@ namespace mca::proc {
         const int frames = std::stoi(config_parser.get("Frames"));
         const int dstWidth = std::stoi(config_parser.get("Width"));
         const int dstHeight = std::stoi(config_parser.get("Height"));
-        const float cropRatio = std::stof(config_parser.get("Ratio"));
+        int patch_size = std::stoi(config_parser.get("Patch"));
 
         const std::string output_path = get_ouput_path(dstWidth, dstHeight, frames,
             input_path, output_dir, "post");
@@ -38,8 +38,8 @@ namespace mca::proc {
         else if (config_parser.get("Type") == "TSPCCalibData")
             layout = std::make_shared<MI::TSPCLayout>(dstWidth, dstHeight, config_parser);
 
-        int width = layout->getMCAWidth(cropRatio);
-        int height = layout->getMCAHeight(cropRatio);
+        int width = layout->getMCAWidth(patch_size);
+        int height = layout->getMCAHeight(patch_size);
 
         for (int i = 0; i < frames; i++)
         {
@@ -47,7 +47,7 @@ namespace mca::proc {
             if (rotation < std::numbers::pi / 4)
                 YUV = cv::Transpose(YUV);
 
-            cv::Mat_C3 MCA_YUV = proc::single_frame(YUV, layout, cropRatio, proc::POST);
+            cv::Mat_C3 MCA_YUV = proc::single_frame(YUV, layout, patch_size, proc::POST);
             if (rotation < std::numbers::pi / 4)
                 MCA_YUV = cv::Transpose(MCA_YUV);
 

@@ -1,0 +1,11 @@
+TSPC:    +2 +4
+Raytrix: +2
+
+
+
+Boxer:   24 26
+Fujita:  16 18
+Origami: 16 18
+R32:     26 28
+TSPC:    50 52 54
+

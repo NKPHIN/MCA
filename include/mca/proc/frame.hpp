@@ -15,13 +15,12 @@ namespace mca::proc {
     constexpr int PRE = 0;
     constexpr int POST = 1;
 
-    inline cv::Mat_C3 single_frame(cv::Mat_C3& src, const MI::layout_ptr& layout, const float cropRatio, const int mode)
+    inline cv::Mat_C3 single_frame(cv::Mat_C3& src, const MI::layout_ptr& layout, int patch_size, const int mode)
     {
         const int rows = layout->getRows();
         const int cols = layout->getCols();
         const float diameter = layout->getDiameter();
 
-        int patch_size = static_cast<int>(diameter * cropRatio);
         if (patch_size % 2 == 1) patch_size++;
 
         int dst_width = patch_size * cols;
@@ -46,7 +45,7 @@ namespace mca::proc {
                 mca::MI::MicroImage mi = layout->getMI(y, x);
                 cv::PointF center = mi.getCenter();
 
-                const float offset = diameter * cropRatio / 2;
+                const auto offset = static_cast<float>(patch_size / 2.0);
                 cv::PointF ltop = center - cv::PointF(offset, offset);
 
                 int ltop_x = static_cast<int>(ltop.getX());
@@ -66,7 +65,6 @@ namespace mca::proc {
                     if (mode == proc::POST)
                         mca::proc::default_padding(dst[c], center, dstRoi, diameter);
                 }
-                // std::cout << "Finish one patch" << std::endl;
             }
         }
         return dst;

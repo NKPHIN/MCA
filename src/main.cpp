@@ -12,7 +12,7 @@ int main(const int argc, char *argv[]) {
     parser.add("-o", "output yuv file path");
     parser.add("-config", "config file path");
     parser.add("-calib", "calibration file path");
-    parser.add("-ratio", "crop ratio(range from 0 t0 1)");
+    parser.add("-patch", "the size of patch in mi");
     parser.add("-log", "generate log info and key params");
 
     parser.parse();

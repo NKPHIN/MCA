@@ -37,8 +37,11 @@ namespace mca::proc {
                 cv::PointI cur = start + dir[index] * d;
                 if (in_circle(cur, center, diameter))
                 {
-                    const char value = src.at(start.getY(), start.getX());
-                    src.set(cur.getY(), cur.getX(), value);
+                    char cur_value = src.at(cur.getY(), cur.getX());
+                    if (cur_value != 0) continue;
+
+                    const char src_value = src.at(start.getY(), start.getX());
+                    src.set(cur.getY(), cur.getX(), src_value);
                 }
                 else break;
             }
