@@ -1,11 +1,8 @@
-TSPC:    +2 +4
-Raytrix: +2
+# The patch size need to test.
 
-
-
-Boxer:   24 26
-Fujita:  16 18
-Origami: 16 18
-R32:     26 28
-TSPC:    50 52 54
+Boxer:   24 26 28
+Fujita:  16 18 20
+Origami: 16 18 20
+R32:     26 28 30
+TSPC:    50 52 54 56 58
 
