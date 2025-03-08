@@ -1,8 +1,8 @@
 # The patch size need to test.
 
-Boxer:   24 26 28
-Fujita:  16 18 20
-Origami: 16 18 20
-R32:     26 28 30
-TSPC:    50 52 54 56 58
+Boxer:   24 26 28 30 32 34 36
+Fujita:  16 18 20 22 24
+Origami: 16 18 20 22 24
+R32:     26 28 30 32 34 36 38
+TSPC:    50 52 54 56 58 60 62 64 66 68 70 72
 

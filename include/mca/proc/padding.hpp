@@ -6,6 +6,8 @@
 #define PADDING_HPP
 
 #include <cmath>
+#include <queue>
+
 #include "mca/common/cv/cv2.hpp"
 
 namespace mca::proc {
@@ -47,6 +49,41 @@ namespace mca::proc {
             }
             start = start + dir[(index + 1) % 4];
             if (start == contour[(index + 1) % 4]) index++;
+        }
+    }
+
+    inline void edge_padding(cv::Mat& src, cv::PointI center, int width, int height)
+    {
+        std::queue<cv::PointI> Q;
+        Q.emplace(center);
+
+        cv::Mat vis(height, width);
+        vis.set(center.getY(), center.getX(), 1);
+
+        const std::vector<cv::PointI> dirs = {{-1, 0}, {0, 1}, {1, 0}, {0, -1}};
+        while (!Q.empty())
+        {
+            cv::PointI cur = Q.front();
+            for (auto dir : dirs)
+            {
+                const int next_x = cur.getX() + dir.getX();
+                const int next_y = cur.getY() + dir.getY();
+
+                if (next_x < 0 || next_x >= width || next_y < 0 || next_y >= height || vis.at(next_y, next_x) == 1)
+                    continue;
+
+                char val = src.at(next_y, next_x);
+                if (val == 0)
+                {
+                    const char cur_value = src.at(cur.getY(), cur.getX());
+                    src.set(next_y, next_x, cur_value);
+                }
+
+                cv::PointI next(next_x, next_y);
+                Q.emplace(next);
+                vis.set(next.getY(), next.getX(), 1);
+            }
+            Q.pop();
         }
     }
 };

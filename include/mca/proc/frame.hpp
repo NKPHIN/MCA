@@ -9,8 +9,6 @@
 #include "mca/common/cv/cv2.hpp"
 #include "mca/common/layout/MI.hpp"
 
-
-
 namespace mca::proc {
     constexpr int PRE = 0;
     constexpr int POST = 1;
@@ -67,6 +65,16 @@ namespace mca::proc {
                 }
             }
         }
+
+        // 扩散法填充边缘
+        if (mode == proc::POST)
+        {
+            const cv::PointF center = layout->getMI(rows / 2, cols / 2).getCenter();
+            const cv::PointI _center(static_cast<int>(center.getX()), static_cast<int>(center.getY()));
+            for (int c = 0; c < 3; c++)
+                mca::proc::edge_padding(dst[c], _center, dst_width, dst_height);
+        }
+
         return dst;
     }
 }
