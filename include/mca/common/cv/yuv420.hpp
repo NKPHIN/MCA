@@ -25,8 +25,8 @@ namespace mca::cv {
         const int cols = src.getCols();
 
         cv::Mat res(rows * 2, cols * 2);
-        const char* src_data = src.getData();
-        char* res_data = res.getData();
+        const unsigned char* src_data = src.getData();
+        unsigned char* res_data = res.getData();
 
         for (int i = 0; i < rows * 2; i++)
         {
@@ -49,8 +49,8 @@ namespace mca::cv {
             throw std::invalid_argument("Error: DownSample size must be even! (mca::cv::DownSample)");
 
         cv::Mat res(rows / 2, cols / 2);
-        const char* src_data = src.getData();
-        char* res_data = res.getData();
+        const unsigned char* src_data = src.getData();
+        unsigned char* res_data = res.getData();
 
         for (int i = 0; i < rows / 2; i++)
         {
@@ -78,8 +78,8 @@ namespace mca::cv {
         ifs.read(reinterpret_cast<char*>(U.getData()), U.size());
         ifs.read(reinterpret_cast<char*>(V.getData()), V.size());
 
-        cv::Mat U_up = UpSample(U);
-        cv::Mat V_up = UpSample(V);
+        const cv::Mat U_up = UpSample(U);
+        const cv::Mat V_up = UpSample(V);
 
         Mat_C3 YUV = {Y, U_up, V_up};
         return YUV;
