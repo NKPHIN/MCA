@@ -58,21 +58,21 @@ namespace mca::proc {
                     std::swap(srcRoi, dstRoi);
 
                 for (int c = 0; c < 3; c++)
-                {
                     cv::copyTo(src[c], dst[c], srcRoi, dstRoi);
-                    if (mode == proc::POST)
-                        mca::proc::default_padding(dst[c], center, dstRoi, diameter);
-                }
             }
         }
 
-        // 扩散法填充边缘
         if (mode == proc::POST)
         {
-            const cv::PointF center = layout->getMI(rows / 2, cols / 2).getCenter();
-            const cv::PointI _center(static_cast<int>(center.getX()), static_cast<int>(center.getY()));
             for (int c = 0; c < 3; c++)
-                mca::proc::edge_padding(dst[c], _center, dst_width, dst_height);
+            {
+                // mca::proc::default_padding(dst[c]);
+                // mca::proc::default_padding(dst[c]);
+                // mca::proc::default_padding(dst[c]);
+                mca::proc::angle_padding(dst[c], layout, c);
+                mca::proc::default_padding(dst[c]);
+                mca::proc::default_padding(dst[c]);
+            }
         }
 
         return dst;

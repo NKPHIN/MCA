@@ -11,79 +11,90 @@
 #include "mca/common/cv/cv2.hpp"
 
 namespace mca::proc {
-    inline bool in_circle(const cv::PointI p, const cv::PointF center, const float diameter)
+    inline double Angle(cv::PointF p1, cv::PointF p2)
     {
-        const float delta_x = static_cast<float>(p.getX()) - center.getX();
-        const float delta_y = static_cast<float>(p.getY()) - center.getY();
+        const float delta_x = p2.getX() - p1.getX();
+        const float delta_y = p1.getY() - p2.getY();
+        const double angle_radians = std::atan2(delta_y, delta_x);
+        const double angle_degrees = angle_radians * (180.0 / M_PI);
 
-        const float dis = std::sqrt(delta_x * delta_x + delta_y * delta_y);
-        return dis <= diameter / 2;
+        return angle_degrees;
     }
 
-    inline void default_padding(cv::Mat& src, cv::PointF center, const cv::Region rect, float diameter)
+    inline void default_padding(cv::Mat& src)
     {
-        cv::PointI ltop = rect.o();
-        cv::PointI rtop = rect.rtop();
-        cv::PointI lbot = rect.lbot();
-        cv::PointI rbot = rect.rbot();
+        const std::vector<std::vector<int>> vecs = {{0, -90}, {0, 90}, {-76, -46},
+            {-76, 44}, {76, -44}, {76, 46}};
 
-        const std::vector<cv::PointI> dir = {{-1, 0}, {0, 1}, {1, 0}, {0, -1}};
-        const std::vector<cv::PointI> contour = {ltop, lbot, rbot, rtop};
+        const int rows = src.getRows();
+        const int cols = src.getCols();
 
-        int index = 0;
-        cv::PointI start = ltop;
-        while (index < 4)
+        for (int x = 0; x < cols; x++)
         {
-            for (int d = 0; d < 20; d++)
+            for (int y = 0; y < rows; y++)
             {
-                cv::PointI cur = start + dir[index] * d;
-                if (in_circle(cur, center, diameter))
-                {
-                    char cur_value = src.at(cur.getY(), cur.getX());
-                    if (cur_value != 0) continue;
+                unsigned char ch = src.at(y, x);
+                if (ch != 0) continue;
 
-                    const char src_value = src.at(start.getY(), start.getX());
-                    src.set(cur.getY(), cur.getX(), src_value);
+                int sum = 0, cnt = 0;
+                for (auto vec : vecs)
+                {
+                    const int ux = x + vec[0];
+                    const int uy = y + vec[1];
+
+                    if (ux < 0 || ux >= cols || uy < 0 || uy >= rows || src.at(uy, ux) == 0) continue;
+
+                    cnt++;
+                    sum += src.at(uy, ux);
                 }
-                else break;
+                if (cnt != 0) sum /= cnt;
+                src.set(y, x, static_cast<unsigned char>(sum));
             }
-            start = start + dir[(index + 1) % 4];
-            if (start == contour[(index + 1) % 4]) index++;
         }
     }
 
-    inline void edge_padding(cv::Mat& src, cv::PointI center, int width, int height)
+    inline void angle_padding(cv::Mat& src, const mca::MI::layout_ptr& layout, int channel)
     {
-        std::queue<cv::PointI> Q;
-        Q.emplace(center);
+        const std::vector<std::vector<int>> vecs = {{-76, -46}, {-76, 44}, {0, 90}, {76, 44}, {76, -44}, {0, -90}};
 
-        cv::Mat vis(height, width);
-        vis.set(center.getY(), center.getX(), 1);
+        const int rows = src.getRows();
+        const int cols = src.getCols();
 
-        const std::vector<cv::PointI> dirs = {{-1, 0}, {0, 1}, {1, 0}, {0, -1}};
-        while (!Q.empty())
+        for (int x = 0; x < cols; x++)
         {
-            cv::PointI cur = Q.front();
-            for (auto dir : dirs)
+            for (int y = 0; y < rows; y++)
             {
-                const int next_x = cur.getX() + dir.getX();
-                const int next_y = cur.getY() + dir.getY();
+                unsigned char ch = src.at(y, x);
+                if (ch != 0) continue;
 
-                if (next_x < 0 || next_x >= width || next_y < 0 || next_y >= height || vis.at(next_y, next_x) == 1)
-                    continue;
+                const cv::PointF closest_center = layout->closestMICenter(cv::PointF(x, y));
+                const double angle = Angle(closest_center, cv::PointF(x, y));
 
-                char val = src.at(next_y, next_x);
-                if (val == 0)
+                int offset = 0;
+                if (-30 <= angle && angle < 30) offset = 0;
+                else if (30 <= angle && angle < 90) offset = 1;
+                else if (90 <= angle && angle < 150) offset = 2;
+                else if (150 <= angle && angle <= 180 || -180 <= angle  && angle < -150) offset = 3;
+                else if (-150 <= angle && angle < -90) offset = 4;
+                else if (-90 <= angle && angle < -30) offset = 5;
+
+                int sum = 0, cnt = 0;
+                for (int i=0; i<2; i++)
                 {
-                    const char cur_value = src.at(cur.getY(), cur.getX());
-                    src.set(next_y, next_x, cur_value);
-                }
+                    const auto& vec = vecs.at((offset + i) % 6);
+                    const int ux = x + vec[0];
+                    const int uy = y + vec[1];
 
-                cv::PointI next(next_x, next_y);
-                Q.emplace(next);
-                vis.set(next.getY(), next.getX(), 1);
+                    if (ux < 0 || ux >= cols || uy < 0 || uy >= rows || src.at(uy, ux) == 0) continue;
+
+                    cnt++;
+                    sum += src.at(uy, ux);
+                }
+                if (cnt != 0) sum /= cnt;
+
+                if (channel == 0 && sum != 0) sum = std::min(sum + 10, 255);
+                src.set(y, x, static_cast<unsigned char>(sum));
             }
-            Q.pop();
         }
     }
 };
