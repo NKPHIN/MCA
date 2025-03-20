@@ -78,6 +78,24 @@ namespace mca::MI {
             return patch_size * rows;
         }
 
+        [[nodiscard]] std::pair<int, int> getMIRowColIndex(const cv::PointF center) const
+        {
+            const int approx_col = static_cast<int>(center.getX() / (diameter * std::sqrt(3) / 2));
+            const int approx_row = static_cast<int>(center.getY() / diameter);
+
+            int i = approx_row, j = approx_col;
+            for (i = std::max(0, approx_row - 3); i < std::min(rows, approx_row + 3); i++)
+            {
+                for (j = std::max(0, approx_col - 3); j < std::min(cols, approx_col + 3); j++)
+                {
+                    auto mi = getMI(i, j);
+                    if (mi.getCenterX() == center.getX() && mi.getCenterY() == center.getY())
+                        return std::make_pair(i, j);
+                }
+            }
+            return std::make_pair(i, j);
+        }
+
         [[nodiscard]] cv::PointF closestMICenter(const cv::PointF cur) const
         {
             const int approx_col = static_cast<int>(cur.getX() / (diameter * std::sqrt(3) / 2));

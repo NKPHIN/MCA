@@ -62,6 +62,7 @@ namespace mca::proc {
             }
         }
 
+        cv::Mat_C3 label = dst;
         if (mode == proc::POST)
         {
             for (int c = 0; c < 3; c++)
@@ -69,10 +70,11 @@ namespace mca::proc {
                 // mca::proc::default_padding(dst[c]);
                 // mca::proc::default_padding(dst[c]);
                 // mca::proc::default_padding(dst[c]);
-                mca::proc::angle_padding(dst[c], layout, c);
+                mca::proc::angle_padding(dst[c], layout);
                 mca::proc::default_padding(dst[c]);
                 mca::proc::default_padding(dst[c]);
             }
+            mca::proc::edge_blurring(dst, label, layout);
         }
 
         return dst;
