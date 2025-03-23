@@ -22,12 +22,12 @@ The params of  `.log`  file produced by  `MCA Encoder`  is as follows:
 ```c++
 # The demo of TSPC sequences
 Type:			TSPCCalibData			// sequence type
-Frames:			10						// frames to be encoded
-Width:			3976					// raw image width
-Height:			2956					// raw image height
-Patch:			50						// crop patch size
-diameter:		70						// diameter of MI
-ltopx:			35						// Below is the layout info used to align image
+Frames:			10				// frames to be encoded
+Width:			3976			        // raw image width
+Height:			2956				// raw image height
+Patch:			50				// crop patch size
+diameter:		70				// diameter of MI
+ltopx:			35				// Below is the layout info used to align image
 ltopy:			36
 rtopx:			3939.5
 rtopy:			35.2
@@ -39,11 +39,11 @@ rboty:			2919.3
     
 # The demo of Raytrix sequences
 Type:			RayCalibData			// sequence type
-Frames:			1						// frames to be encoded
-Width:			2048					// raw image width
-Height:			2048					// raw image height
-Patch:			16						// crop patch size
-diameter:		23.202295303345			// diameter of MI
+Frames:			1				// frames to be encoded
+Width:			2048				// raw image width
+Height:			2048				// raw image height
+Patch:			16				// crop patch size
+diameter:		23.202295303345		        // diameter of MI
 rotation:		1.570796370506			// Below is the layout info used to align image
 offsetx:		13.040943844572
 offsety:		-20.348051920159
