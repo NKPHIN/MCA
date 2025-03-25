@@ -54,3 +54,42 @@ offsety:		-20.348051920159
 > I would like to mention that our  `MCA Decoder`  is still being optimized. However, no matter how much we optimize it, we will ensure that there is **only one** additional  `.log`  file generated after the  `MCA Encoder`.  We hope that the mobile side can reserve a good interface for this.
 
 
+
+#### Argument usage
+
+The demo of how to use `MCA Encoder` and `MCA Decoder` is as follows:
+
+```shell
+# The params option of MCA Encoder
+-proc:		Pre				    		# To execuate MCA Encoder	
+-i:		input yuv file path   		
+-o:		output yuv directory path		
+-config:	input vvc config file path
+-calib		input sequence calib file path
+-patch		cropped patch size
+-log		output log file path
+    
+# usage demo
+./mca -proc Pre -i "Boys2_3976x2956_10frames_8bit_yuv420.yuv" -o "./output/" -config "Boys2.cfg" -calib "./calib.xml" -patch 50 -log "Boys2.log"
+    
+# MCA Encoder will output a yuv file and a log file.
+"./output/Boys2_3250x2100_10frames_8bit_yuv420_pre.yuv" and "Boys2.log"
+
+    
+# The params option of MCA Decoder
+-proc:		Post						# To execuate MCA Decoder
+-i:		input yuv file path
+-o:		output yuv directory path
+-log:		input log file path
+    
+# usage demo
+./mca -proc Post -i "Boys2_3250x2100_10frames_8bit_yuv420_pre.yuv" -o "./output/" -log "Boys2.log" 
+    
+# MCA Decoder will only ouput a yuv file
+"./output/Boys2_3976x2956_10frames_8bit_yuv420_post.yuv"   
+```
+
+> [!CAUTION]
+>
+> Do **NOT** specify the output yuv file name, a output file folder directory is OK. `Encoder` and `Decoder` will determine the resolution of output yuv file by itself.
+
