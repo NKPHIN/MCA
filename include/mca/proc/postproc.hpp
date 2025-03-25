@@ -47,7 +47,11 @@ namespace mca::proc {
             if (rotation < std::numbers::pi / 4)
                 YUV = cv::Transpose(YUV);
 
-            cv::Mat_C3 MCA_YUV = proc::single_frame(YUV, layout, patch_size, proc::POST);
+            cv::Mat_C3 MCA_YUV = proc::crop(YUV, layout, patch_size, proc::POST);
+            std::vector<std::vector<int>> vecs = proc::readVectors(config_parser);
+            std::vector<double> theta = proc::readMetaData(config_parser, i);
+            proc::padding(MCA_YUV, layout, vecs, theta);
+
             if (rotation < std::numbers::pi / 4)
                 MCA_YUV = cv::Transpose(MCA_YUV);
 

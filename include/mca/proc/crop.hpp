@@ -13,11 +13,10 @@ namespace mca::proc {
     constexpr int PRE = 0;
     constexpr int POST = 1;
 
-    inline cv::Mat_C3 single_frame(cv::Mat_C3& src, const MI::layout_ptr& layout, int patch_size, const int mode)
+    inline cv::Mat_C3 crop(cv::Mat_C3& src, const MI::layout_ptr& layout, int patch_size, const int mode)
     {
         const int rows = layout->getRows();
         const int cols = layout->getCols();
-        const float diameter = layout->getDiameter();
 
         if (patch_size % 2 == 1) patch_size++;
 
@@ -61,22 +60,6 @@ namespace mca::proc {
                     cv::copyTo(src[c], dst[c], srcRoi, dstRoi);
             }
         }
-
-        cv::Mat_C3 label = dst;
-        if (mode == proc::POST)
-        {
-            for (int c = 0; c < 3; c++)
-            {
-                // mca::proc::default_padding(dst[c]);
-                // mca::proc::default_padding(dst[c]);
-                // mca::proc::default_padding(dst[c]);
-                mca::proc::angle_padding(dst[c], layout);
-                mca::proc::default_padding(dst[c]);
-                mca::proc::default_padding(dst[c]);
-            }
-            mca::proc::edge_blurring(dst, label, layout);
-        }
-
         return dst;
     }
 }

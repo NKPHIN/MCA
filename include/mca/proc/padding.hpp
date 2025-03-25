@@ -28,12 +28,8 @@ namespace mca::proc {
         return std::sqrt((delta_x * delta_x) + (delta_y * delta_y));
     }
 
-    inline void default_padding(cv::Mat& src)
+    inline void default_padding(cv::Mat& src, const std::vector<std::vector<int>>& vecs)
     {
-        // const std::vector<std::vector<int>> vecs = {{0, -90}, {0, 90}, {-76, -46}, {-76, 44}, {76, -44}, {76, 46}};
-        // const std::vector<std::vector<int>> vecs = {{14, 8}, {14, -8}, {0, -16}, {-14, -8}, {-14, 8}, {0, 16}}; // fujita
-        const std::vector<std::vector<int>> vecs = {{23, 13}, {23, -13}, {0, -26}, {-23, -13}, {-23, 13}, {0, 26}};
-
         const int rows = src.getRows();
         const int cols = src.getCols();
 
@@ -61,13 +57,8 @@ namespace mca::proc {
         }
     }
 
-    inline void angle_padding(cv::Mat& src, const mca::MI::layout_ptr& layout)
+    inline void angle_padding(cv::Mat& src, const mca::MI::layout_ptr& layout, const std::vector<std::vector<int>>& vecs)
     {
-        // const std::vector<std::vector<int>> vecs = {{-76, -46}, {-76, 44}, {0, 90}, {76, 44}, {76, -44}, {0, -90}};    // Boys2
-        // const std::vector<std::vector<int>> vecs = {{-76, -42}, {-76, 44}, {0, 86}, {76, 44}, {76, -42}, {0, -86}};    // MiniGarden2 TSPC
-        // const std::vector<std::vector<int>> vecs = {{14, 8}, {14, -8}, {0, -16}, {-14, -8}, {-14, 8}, {0, 16}};        // fujita、origami
-        const std::vector<std::vector<int>> vecs = {{23, 13}, {23, -13}, {0, -26}, {-23, -13}, {-23, 13}, {0, 26}};   // R32、Boxer2
-
         const int rows = src.getRows();
         const int cols = src.getCols();
 
@@ -110,96 +101,39 @@ namespace mca::proc {
         }
     }
 
-
-    inline void edge_blurring(cv::Mat_C3& pre, cv::Mat_C3& label, const mca::MI::layout_ptr& layout)
+    inline void edge_blurring(cv::Mat_C3& pre, cv::Mat_C3& label, const mca::MI::layout_ptr& layout, const std::vector<double> &theta)
     {
-        // std::string ori_path = R"(C:\WorkSpace\MPEG\MCA\Sequence\MiniGarden2_4036x3064_1frames_8bit_yuv420.yuv)";
-        // std::string ori_path = R"(C:\WorkSpace\MPEG\MCA\Sequence\Boys2_3976x2956_10frames_8bit_yuv420.yuv)";
-        // std::string ori_path = R"(C:\WorkSpace\MPEG\MCA\Sequence\Origami_2048x2048_1frames_8bit_yuv420.yuv)";
-        std::string ori_path = R"(C:\WorkSpace\MPEG\MCA\Sequence\Boxer-IrishMan-Gladiator2_3840x2160_1frames_8bit_yuv420.yuv)";
-        std::ifstream ifs(ori_path, std::ios::binary);
-
-        // attention the width * height !!
-        cv::Mat_C3 ori = mca::cv::read(ifs, 3840, 2160);
-        ori = cv::Transpose(ori);
-
         const int width = pre[0].getCols();
         const int height = pre[0].getRows();
 
-        for (int c = 0; c < 3; c++)
+        for (int x = 0; x < width; x++)
         {
-            std::vector<std::vector<double>> zi, mu, theta;
-            int rows = layout->getRows();
-            int cols = layout->getCols();
-
-            zi.resize(rows * cols + 1);
-            mu.resize(rows * cols + 1);
-            theta.resize(rows * cols + 1);
-
-            for (int i = 0; i < rows * cols; i++)
+            for (int y = 0; y < height; y++)
             {
-                zi[i].resize(100, 0);
-                mu[i].resize(100, 0);
-                theta[i].resize(100, 1.0);
-            }
+                unsigned char ch = label[0].at(y, x);
+                if (ch != 0) continue;
 
-            for (int x = 0; x < width; x++)
-            {
-                for (int y = 0; y < height; y++)
-                {
-                    char ch = label[c].at(y, x);
-                    if (ch != 0) continue;
+                const cv::PointF closest_center = layout->closestMICenter(cv::PointF(x, y));
+                const int distance = static_cast<int>(dis(closest_center, cv::PointF(x, y)));
 
-                    const cv::PointF closest_center = layout->closestMICenter(cv::PointF(x, y));
-                    int distance = static_cast<int>(dis(closest_center, cv::PointF(x, y)));
+                int pixel = pre[0].at(y, x);
+                pixel = std::min(static_cast<int>(pixel * theta[distance]), 255);
 
-                    int ori_pixel = ori[c].at(y, x);
-                    int pre_pixel = pre[c].at(y, x);
-
-                    int row_id = layout->getMIRowColIndex(closest_center).first;
-                    int col_id = layout->getMIRowColIndex(closest_center).second;
-
-                    int id = row_id * cols + col_id;
-
-                    zi[id][distance] += static_cast<double>(pre_pixel * ori_pixel);
-                    mu[id][distance] += static_cast<double>(pre_pixel * pre_pixel);
-                }
-            }
-
-            for (int r = 0; r < rows; r++)
-            {
-                for (int _c = 0; _c < cols; _c++)
-                {
-                    int id = r * cols + _c;
-                    for (int i = 0; i < 100; i++)
-                    {
-                        if (zi[id][i] != 0)
-                            theta[id][i] = zi[id][i] / mu[id][i];
-                    }
-                }
-            }
-
-            for (int x = 0; x < width; x++)
-            {
-                for (int y = 0; y < height; y++)
-                {
-                    char ch = label[c].at(y, x);
-                    if (ch != 0) continue;
-
-                    const cv::PointF closest_center = layout->closestMICenter(cv::PointF(x, y));
-                    int distance = static_cast<int>(dis(closest_center, cv::PointF(x, y)));
-
-                    int row_id = layout->getMIRowColIndex(closest_center).first;
-                    int col_id = layout->getMIRowColIndex(closest_center).second;
-                    int id = row_id * cols + col_id;
-
-                    int pixel = pre[c].at(y, x);
-                    pixel = std::min(static_cast<int>(pixel * theta[id][distance]), 255);
-
-                    pre[c].set(y, x, static_cast<unsigned char>(pixel));
-                }
+                pre[0].set(y, x, static_cast<unsigned char>(pixel));
             }
         }
+    }
+
+    inline void padding(cv::Mat_C3& src, const mca::MI::layout_ptr& layout, const std::vector<std::vector<int>>& vecs, const std::vector<double> &theta)
+    {
+        cv::Mat_C3 label = src;
+        for (int c = 0; c < 3; c++)
+        {
+            mca::proc::angle_padding(src[c], layout, vecs);
+            mca::proc::default_padding(src[c], vecs);
+            mca::proc::default_padding(src[c], vecs);
+        }
+        mca::proc::edge_blurring(src, label, layout, theta);
     }
 };
 
