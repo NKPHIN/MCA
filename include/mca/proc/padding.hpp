@@ -9,25 +9,9 @@
 #include <queue>
 
 #include "mca/common/cv/cv2.hpp"
+#include "mca/utils/math.hpp"
 
 namespace mca::proc {
-    inline double Angle(cv::PointF p1, cv::PointF p2)
-    {
-        const float delta_x = p2.getX() - p1.getX();
-        const float delta_y = p1.getY() - p2.getY();
-        const double angle_radians = std::atan2(delta_y, delta_x);
-        const double angle_degrees = angle_radians * (180.0 / M_PI);
-
-        return angle_degrees;
-    }
-
-    inline double dis(cv::PointF p1, cv::PointF p2)
-    {
-        const float delta_x = p1.getX() - p2.getX();
-        const float delta_y = p1.getY() - p2.getY();
-        return std::sqrt((delta_x * delta_x) + (delta_y * delta_y));
-    }
-
     inline void default_padding(cv::Mat& src, const std::vector<std::vector<int>>& vecs)
     {
         const int rows = src.getRows();
@@ -69,10 +53,13 @@ namespace mca::proc {
                 unsigned char ch = src.at(y, x);
                 if (ch != 0) continue;
 
-                const cv::PointF closest_center = layout->closestMICenter(cv::PointF(x, y));
-                const double angle = Angle(closest_center, cv::PointF(x, y));
+                const auto fx = static_cast<float>(x);
+                const auto fy = static_cast<float>(y);
 
-                float distance = dis(closest_center, cv::PointF(x, y));
+                const cv::PointF closest_center = layout->closestMICenter(cv::PointF(fx, fy));
+                const double angle = ang(closest_center, cv::PointF(fx, fy));
+
+                double distance = dis(closest_center, cv::PointF(fx, fy));
                 if (distance > layout->getDiameter() * 0.5) continue;
 
                 int offset = 0;
@@ -113,8 +100,11 @@ namespace mca::proc {
                 unsigned char ch = label[0].at(y, x);
                 if (ch != 0) continue;
 
-                const cv::PointF closest_center = layout->closestMICenter(cv::PointF(x, y));
-                const int distance = static_cast<int>(dis(closest_center, cv::PointF(x, y)));
+                const auto fx = static_cast<float>(x);
+                const auto fy = static_cast<float>(y);
+
+                const cv::PointF closest_center = layout->closestMICenter(cv::PointF(fx, fy));
+                const int distance = static_cast<int>(dis(closest_center, cv::PointF(fx, fy)));
 
                 int pixel = pre[0].at(y, x);
                 pixel = std::min(static_cast<int>(pixel * theta[distance]), 255);

@@ -29,4 +29,5 @@ add_executable(MCA src/main.cpp
         include/mca/proc/crop.hpp
         include/mca/proc/padding.hpp
         include/mca/proc/log.hpp
+        include/mca/utils/math.hpp
 )
