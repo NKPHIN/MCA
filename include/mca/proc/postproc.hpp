@@ -5,7 +5,9 @@
 #ifndef POSTPROC_HPP
 #define POSTPROC_HPP
 
+#include "preproc.hpp"
 #include "mca/common/cv/cv2.hpp"
+#include "mca/pred/prediction.hpp"
 #include "mca/io/parser/parser.hpp"
 
 namespace mca::proc {
@@ -20,7 +22,7 @@ namespace mca::proc {
         const int dstHeight = std::stoi(config_parser.get("Height"));
         int patch_size = std::stoi(config_parser.get("Patch"));
 
-        const std::string output_path = get_ouput_path(dstWidth, dstHeight, frames,
+        const std::string output_path = proc::get_ouput_path(dstWidth, dstHeight, frames,
             input_path, output_dir, "post");
 
         std::ifstream ifs(input_path, std::ios::binary);
@@ -41,6 +43,7 @@ namespace mca::proc {
         int width = layout->getMCAWidth(patch_size);
         int height = layout->getMCAHeight(patch_size);
 
+        cv::Mat_C3 pre;
         for (int i = 0; i < frames; i++)
         {
             cv::Mat_C3 YUV = cv::read(ifs, width, height);
@@ -48,9 +51,14 @@ namespace mca::proc {
                 YUV = cv::Transpose(YUV);
 
             cv::Mat_C3 MCA_YUV = proc::crop(YUV, layout, patch_size, proc::POST);
-            std::vector<std::vector<int>> vecs = proc::readVectors(config_parser);
-            std::vector<double> theta = proc::readMetaData(config_parser, i);
-            proc::padding(MCA_YUV, layout, vecs, theta);
+            // std::vector<std::vector<int>> vecs = proc::readVectors(config_parser);
+            // std::vector<double> theta = proc::readMetaData(config_parser, i);
+            // proc::padding(MCA_YUV, layout, vecs);
+
+            std::vector<std::vector<int>> mvs = readBlockTree(config_parser, i);
+            MCA_YUV = reconstruct(MCA_YUV, pre, mvs, i);
+
+            pre = MCA_YUV;
 
             if (rotation < std::numbers::pi / 4)
                 MCA_YUV = cv::Transpose(MCA_YUV);

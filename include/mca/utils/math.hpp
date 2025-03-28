@@ -57,12 +57,14 @@ namespace mca::proc {
             cv::Mat_C3 image_a = cv::read(ifs_a, width, height);
             cv::Mat_C3 image_b = cv::read(ifs_b, width, height);
 
+            if (i == 0) continue;
             total += psnr(image_a[0], image_b[0]);
+            std::cout << psnr(image_a[0], image_b[0]) << std::endl;
         }
 
         ifs_a.close();
         ifs_b.close();
-        return total / frames;
+        return total / (frames - 1);
     }
 }
 

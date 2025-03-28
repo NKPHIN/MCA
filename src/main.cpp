@@ -39,6 +39,11 @@ int main(const int argc, char *argv[]) {
         if (config.load() != -1)
             std::cout << "Loaded config file: " << log_path << std::endl;
         mca::proc::postproc(parser, config);
+
+        std::string ori_path = R"(C:\WorkSpace\MPEG\MCA\Sequence\Boys2_3976x2956_10frames_8bit_yuv420.yuv)";
+        std::string output_path = R"(C:\WorkSpace\MPEG\MCA\test_0327\post\Boys2_3976x2956_10frames_8bit_yuv420_post.yuv)";
+
+        std::cout << mca::proc::y_psnr(ori_path, output_path, 3976, 2956, 10);
     }
 
     return 0;

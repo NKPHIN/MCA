@@ -30,4 +30,6 @@ add_executable(MCA src/main.cpp
         include/mca/proc/padding.hpp
         include/mca/proc/log.hpp
         include/mca/utils/math.hpp
+        include/mca/pred/inter/Block.hpp
+        include/mca/pred/prediction.hpp
 )

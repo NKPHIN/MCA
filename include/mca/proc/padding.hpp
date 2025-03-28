@@ -41,7 +41,7 @@ namespace mca::proc {
         }
     }
 
-    inline void angle_padding(cv::Mat& src, const mca::MI::layout_ptr& layout, const std::vector<std::vector<int>>& vecs)
+    inline void angle_padding(cv::Mat& src, const mca::MI::layout_ptr& layout, const std::vector<std::vector<int>>& vecs, const double ratio)
     {
         const int rows = src.getRows();
         const int cols = src.getCols();
@@ -60,7 +60,7 @@ namespace mca::proc {
                 const double angle = ang(closest_center, cv::PointF(fx, fy));
 
                 double distance = dis(closest_center, cv::PointF(fx, fy));
-                if (distance > layout->getDiameter() * 0.5) continue;
+                if (distance > layout->getDiameter() * ratio) continue;
 
                 int offset = 0;
                 if (-30 <= angle && angle < 30) offset = 0;
@@ -114,16 +114,17 @@ namespace mca::proc {
         }
     }
 
-    inline void padding(cv::Mat_C3& src, const mca::MI::layout_ptr& layout, const std::vector<std::vector<int>>& vecs, const std::vector<double> &theta)
+    inline void padding(cv::Mat_C3& src, const mca::MI::layout_ptr& layout, const std::vector<std::vector<int>>& vecs)
     {
         cv::Mat_C3 label = src;
-        for (int c = 0; c < 3; c++)
+        for (int c = 1; c < 3; c++)
         {
-            mca::proc::angle_padding(src[c], layout, vecs);
+            // boys2: 0.43
+            mca::proc::angle_padding(src[c], layout, vecs, 0.5);
             mca::proc::default_padding(src[c], vecs);
             mca::proc::default_padding(src[c], vecs);
         }
-        mca::proc::edge_blurring(src, label, layout, theta);
+        // mca::proc::edge_blurring(src, label, layout, theta);
     }
 };
 

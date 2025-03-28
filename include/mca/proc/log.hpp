@@ -6,9 +6,11 @@
 #define LOG_HPP
 
 #include "crop.hpp"
+#include "mca/pred/prediction.hpp"
 #include "mca/common/cv/cv2.hpp"
 #include "mca/common/layout/MI.hpp"
 #include "mca/io/parser/parser.hpp"
+#include "mca/pred/prediction.hpp"
 
 namespace mca::proc {
     class Logger {
@@ -86,7 +88,7 @@ namespace mca::proc {
             cv::Mat_C3 label_image = post_image;
 
             // 目前只对 y 通道做边界优化操作
-            angle_padding(post_image[0], layout, vecs);
+            angle_padding(post_image[0], layout, vecs, 0.5);
             default_padding(post_image[0], vecs);
             default_padding(post_image[0], vecs);
 
@@ -138,6 +140,21 @@ namespace mca::proc {
             ofs << std::endl;
             ofs.close();
         }
+
+        void writeMVData(prediction::inter::BlockTree block_tree, int frame) const
+        {
+            std::ofstream ofs(log_path, std::ios::app);
+            const prediction::inter::BlockNodePtr root = block_tree.getRoot();
+
+            ofs << "Frame" << frame << ":";
+            std::vector<std::vector<int>> mvs = block_tree.getMVs();
+            for (const auto& mv : mvs)
+            {
+                for (auto elem : mv)
+                    ofs << elem << ",";
+            }
+            ofs << std::endl;
+        }
     };
 
     inline std::vector<std::vector<int>> readVectors(mca::parser::ConfigParser& log_parser)
@@ -179,6 +196,29 @@ namespace mca::proc {
             else theta[start++] = std::stod(token);
         }
         return theta;
+    }
+
+    inline std::vector<std::vector<int>> readBlockTree(mca::parser::ConfigParser& log_parser, const int index)
+    {
+        std::vector<std::vector<int>> vecs;
+
+        const std::string data = log_parser.get("Frame" + std::to_string(index));
+        std::stringstream stream(data);
+
+        std::string level, mv_x, mv_y;
+        while (std::getline(stream, level, ','))
+        {
+            std::vector<int> vec;
+            if (std::stoi(level) >= 1)
+            {
+                std::getline(stream, mv_x, ',');
+                std::getline(stream, mv_y, ',');
+                vec = {std::stoi(level), std::stoi(mv_x), std::stoi(mv_y)};
+            }
+            else vec = {std::stoi(level)};
+            vecs.push_back(vec);
+        }
+        return vecs;
     }
 };
 
