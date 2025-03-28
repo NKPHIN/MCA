@@ -22,7 +22,7 @@ namespace mca::prediction::inter {
         cv::PointI vertex;
         std::vector<std::shared_ptr<BlockNode>> children;
 
-        int mode = INTER_PREDICTION;        // TODO
+        int mode = INTER_PREDICTION;
         bool is_leaf = false;
         bool is_valid = true;
         std::vector<int> mv;
