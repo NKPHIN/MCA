@@ -58,6 +58,19 @@ namespace mca::cv {
                 return false;
             return true;
         }
+
+        [[nodiscard]] bool contains(const Region &sub) const
+        {
+            int x = ltop.getX();
+            int y = ltop.getY();
+
+            if (sub.o().getX() < x) return false;
+            if (sub.o().getY() < y) return false;
+            if (sub.o().getX() + sub.getWidth() > x + width) return false;
+            if (sub.o().getY() + sub.getHeight() > y + height) return false;
+
+            return true;
+        }
     };
 }
 

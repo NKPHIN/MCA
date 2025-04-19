@@ -1,6 +1,6 @@
 # Boys2
-"C:\WorkSpace\C++\MCA\cmake-build-debug\MCA.exe" -proc Post -i "C:\WorkSpace\MPEG\MCA\test_0325\pre\Boys2_3250x2100_10frames_8bit_yuv420_pre.yuv" \
--o "C:\WorkSpace\MPEG\MCA\test_0325\post" -log "C:\WorkSpace\C++\MCA\config\Boys2\Boys2.log"
+"C:\WorkSpace\C++\MCA\cmake-build-debug\MCA.exe" -proc Post -i "C:\WorkSpace\MPEG\MCA\test_0409\pre\Boys2_3250x2100_1frames_8bit_yuv420_pre.yuv" \
+-o "C:\WorkSpace\MPEG\MCA\test_0409\post" -log "C:\WorkSpace\C++\MCA\config\Boys2\Boys2.log"
 
 
 # HandTools

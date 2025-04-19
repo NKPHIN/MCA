@@ -8,6 +8,7 @@
 #include <cmath>
 #include <queue>
 
+#include "log.hpp"
 #include "mca/common/cv/cv2.hpp"
 #include "mca/utils/math.hpp"
 
@@ -117,9 +118,17 @@ namespace mca::proc {
     inline void padding(cv::Mat_C3& src, const mca::MI::layout_ptr& layout, const std::vector<std::vector<int>>& vecs, const std::vector<double> &theta)
     {
         cv::Mat_C3 label = src;
+
+        const std::string bin_path = R"(C:\WorkSpace\MPEG\MCA\test_0409\boys.bin)";
+        std::ifstream ifs(bin_path, std::ios::binary | std::ios::in);
+        const std::vector<std::vector<int>> mvs = proc::readIntraMVData(bin_path, 0);
+
+        const prediction::IntraBlockTree block_tree(src, mvs);
+        src = block_tree.getCroppedMat();
+
         for (int c = 0; c < 3; c++)
         {
-            mca::proc::angle_padding(src[c], layout, vecs);
+            mca::proc::default_padding(src[c], vecs);
             mca::proc::default_padding(src[c], vecs);
             mca::proc::default_padding(src[c], vecs);
         }

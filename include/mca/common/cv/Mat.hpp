@@ -18,6 +18,7 @@ namespace mca::cv {
         std::vector<unsigned char> data;
 
     public:
+        Mat() = default;
         Mat(const int rows, const int cols)
         {
             this->rows = rows;
@@ -67,6 +68,31 @@ namespace mca::cv {
 
             return contains(lbot) && contains(rtop) && contains(ltop) && contains(rtop);
         }
+
+        [[nodiscard]] Mat sub(const Region& region) const
+        {
+            const cv::Point<int> ltop = region.o();
+            const int width = region.getWidth();
+            const int height = region.getHeight();
+
+            if (height > rows || width > cols)
+                throw std::out_of_range("The size of Sub matrix must less than origin matrix!");
+            Mat result(height, width);
+
+            unsigned char* res_data = result.getData();
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    const int ux = x + ltop.getX();
+                    const int uy = y + ltop.getY();
+
+                    res_data[x + y * width] = data[ux + uy * cols];
+                }
+            }
+
+            return result;
+        }
     };
 
     inline bool copyTo(Mat& src, Mat& dst, const Region& srcRoi, const Region& dstRoi)
@@ -89,6 +115,39 @@ namespace mca::cv {
 
             strncpy(reinterpret_cast<char *>(dstData + dst_start),
                 reinterpret_cast<const char *>(srcData + src_start), sizeof(char)*width);
+        }
+
+        return true;
+    }
+
+    inline bool copyTo(Mat& src, Mat& dst, Mat& mask, const Region& srcRoi, const Region& dstRoi)
+    {
+        if (!srcRoi.match(dstRoi)) return false;
+        if (!src.contains(srcRoi) || !dst.contains(dstRoi)) return false;
+
+        const unsigned char* srcData = src.getData();
+        unsigned char* dstData = dst.getData();
+
+        const cv::Point<int> src_o = srcRoi.o();
+        const cv::Point<int> dst_o = dstRoi.o();
+        const int width = srcRoi.getWidth();
+        const int height = srcRoi.getHeight();
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                const int src_x = src_o.getX() + x;
+                const int src_y = src_o.getY() + y;
+
+                const int dst_x = dst_o.getX() + x;
+                const int dst_y = dst_o.getY() + y;
+
+                if (mask.at(dst_y, dst_x) > 0) continue;
+
+                unsigned char src_value = src.at(src_y, src_x);
+                dst.set(dst_y, dst_x, src_value);
+            }
         }
 
         return true;

@@ -27,6 +27,18 @@ namespace mca::proc {
         return std::sqrt((delta_x * delta_x) + (delta_y * delta_y));
     }
 
+    inline double psnr2mse(const double psnr)
+    {
+        const double tmp = pow(10, (psnr / 10)) / (255 * 255);
+        return 1.0 / tmp;
+    }
+
+    inline double mse2psnr(const double mse)
+    {
+        constexpr int MAX_N = 255;
+        return 10 * std::log10(MAX_N * MAX_N / mse);
+    }
+
     inline double psnr(cv::Mat& a, cv::Mat& b)
     {
         constexpr double MAX_N = 255;
@@ -42,8 +54,7 @@ namespace mca::proc {
             mse += std::pow((a_data[i] - b_data[i]), 2);
         mse /= (width * height);
 
-        const double res = 10 * std::log10(MAX_N * MAX_N / mse);
-        return res;
+        return mse2psnr(mse);
     }
 
     inline double y_psnr(const std::string& a, const std::string& b, const int width, const int height, const int frames)
@@ -63,6 +74,32 @@ namespace mca::proc {
         ifs_a.close();
         ifs_b.close();
         return total / frames;
+    }
+
+    inline double local_psnr(cv::Mat& a, cv::Mat& b)
+    {
+        constexpr double MAX_N = 255;
+
+        double mse = 0;
+        const int width = a.getCols();
+        const int height = a.getRows();
+
+        const unsigned char* a_data = a.getData();
+        const unsigned char* b_data = b.getData();
+
+        int cnt = 0;
+        for (int i = 0; i < width * height; i++)
+        {
+            if (b_data[i] != 0)
+            {
+                mse += std::pow((a_data[i] - b_data[i]), 2);
+                cnt++;
+            }
+        }
+        mse /= cnt;
+
+        const double res = 10 * std::log10(MAX_N * MAX_N / mse);
+        return res;
     }
 }
 

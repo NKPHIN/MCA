@@ -49,7 +49,8 @@ namespace mca::proc {
 
             cv::Mat_C3 MCA_YUV = proc::crop(YUV, layout, patch_size, proc::POST);
             std::vector<std::vector<int>> vecs = proc::readVectors(config_parser);
-            std::vector<double> theta = proc::readMetaData(config_parser, i);
+            std::vector<double> theta = proc::readMetaData(config_parser, 0);
+
             proc::padding(MCA_YUV, layout, vecs, theta);
 
             if (rotation < std::numbers::pi / 4)
