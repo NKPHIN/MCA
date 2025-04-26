@@ -41,6 +41,14 @@ namespace mca::proc {
         int width = layout->getMCAWidth(patch_size);
         int height = layout->getMCAHeight(patch_size);
 
+        const int interval = std::stoi(arg_parser.get("-interval"));
+        const std::string bin_path = arg_parser.get("-bin");
+        const std::vector<std::string> bitstreams = readIntraBitstream(bin_path, frames / interval + 1);
+
+        int min_block_size = std::stoi(arg_parser.get("-min_block_size"));
+        int max_block_size = std::stoi(arg_parser.get("-max_block_size"));
+        std::pair<int, int> block_size = std::make_pair(min_block_size, max_block_size);
+
         for (int i = 0; i < frames; i++)
         {
             cv::Mat_C3 YUV = cv::read(ifs, width, height);
@@ -51,7 +59,7 @@ namespace mca::proc {
             std::vector<std::vector<int>> vecs = proc::readVectors(config_parser);
             std::vector<double> theta = proc::readMetaData(config_parser, 0);
 
-            proc::padding(MCA_YUV, layout, vecs, theta);
+            proc::padding(MCA_YUV, layout, vecs, theta, bitstreams[i / interval], block_size);
 
             if (rotation < std::numbers::pi / 4)
                 MCA_YUV = cv::Transpose(MCA_YUV);

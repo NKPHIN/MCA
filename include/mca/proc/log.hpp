@@ -20,6 +20,7 @@ namespace mca::proc {
         int height;
         int patch;
         std::string log_path;
+        std::string bin_path;
         std::vector<std::vector<int>> vecs;
 
         void initVecs(const std::string& seq_name)
@@ -66,6 +67,7 @@ namespace mca::proc {
             height = std::stoi(config_parser.get("SourceHeight"));
             patch = std::stoi(arg_parser.get("-patch"));
             log_path = arg_parser.get("-log");
+            bin_path = arg_parser.get("-bin");
 
             const std::string seq_name = config_parser.get("InputFile");
             initVecs(seq_name);
@@ -159,35 +161,47 @@ namespace mca::proc {
             ofs.close();
         }
 
-        void writeIntraMVData(prediction::IntraBlockTree block_tree, const int frame)
+        void writeIntraMVData(prediction::BlockMap map)
         {
-            const std::string bin_path = R"(C:\WorkSpace\MPEG\MCA\test_0409\boys.bin)";
-            std::ofstream ofs(bin_path, std::ios::binary | std::ios::out);
-            const prediction::BlockNodePtr root = block_tree.getRoot();
+            std::ofstream ofs(bin_path, std::ios::binary | std::ios::out | std::ios::app);
 
-            std::vector<std::vector<int>> mvs = block_tree.getMVs();
+            std::vector<std::vector<std::vector<int>>> mvs = map.getMvs();
             std::string bitstream;
 
-            for (const auto& mv : mvs)
+            for (const auto& group : mvs)
             {
-                std::bitset<1> level(mv[0]);
-                std::bitset<3> dir(mv[1]);
-                bitstream.append(level.to_string());
-                bitstream.append(dir.to_string());
-
-                if (mv[1] < 6)
+                int pre_layer = -1;
+                for (const auto& mv : group)
                 {
-                    std::bitset<3> offset_x(mv[2] + 3);
-                    std::bitset<3> offset_y(mv[3] + 3);
-                    bitstream.append(offset_x.to_string());
-                    bitstream.append(offset_y.to_string());
+                    std::bitset<1> level(mv[0]);
+                    std::bitset<3> dir(mv[1]);
+                    if (mv[0] == 0 || (mv[0] == 1 && pre_layer != 1))
+                    {
+                        bitstream.append(level.to_string());
+                        pre_layer = 1;
+                    }
+                    bitstream.append(dir.to_string());
+
+                    if (mv[1] < 6)
+                    {
+                        std::bitset<3> offset_x(mv[2] + 3);
+                        std::bitset<3> offset_y(mv[3] + 3);
+                        bitstream.append(offset_x.to_string());
+                        bitstream.append(offset_y.to_string());
+                    }
+                    else if (mv[1] == 7)
+                    {
+                        std::bitset<2> index(mv[2]);
+                        bitstream.append(index.to_string());
+                    }
                 }
             }
-            int size = static_cast<int>(mvs.size());
-            std::cout << "size: " << size << std::endl;
-            ofs.write(reinterpret_cast<const char *>(&size), sizeof(int));
-            writeBitstream(ofs, bitstream);
 
+            int size = static_cast<int>(bitstream.size());
+            int bytes = std::ceil(1.0 * size / 8);
+            ofs.write(reinterpret_cast<char*>(&bytes), sizeof(bytes));
+
+            writeBitstream(ofs, bitstream);
             ofs.close();
         }
     };
@@ -233,44 +247,28 @@ namespace mca::proc {
         return theta;
     }
 
-    inline std::vector<std::vector<int>> readIntraMVData(const std::string& file, const int index)
+    inline std::vector<std::string> readIntraBitstream(const std::string& file, const int cnt)
     {
         std::ifstream ifs(file, std::ios::binary | std::ios::in);
+        std::vector<std::string> strs;
+        strs.resize(cnt);
 
-        int size;
-        ifs.read(reinterpret_cast<char *>(&size), sizeof(int));
-
-        std::string bitstream;
-        unsigned char buffer;
-        while (ifs.read(reinterpret_cast<char*>(&buffer), sizeof(buffer)))
-            bitstream += std::bitset<8>(buffer).to_string();
-
-        int start = 0;
-        std::vector<std::vector<int>> mvs;
-
-        for (int i = 0; i < size; i++)
+        for (int i = 0; i < cnt; i++)
         {
-            std::bitset<1> level(bitstream[start]);
-            std::bitset<3> dir(bitstream.substr(start + 1, 3));
+            int bytes;
+            std::string bitstream;
+            ifs.read(reinterpret_cast<char*>(&bytes), sizeof(bytes));
 
-            std::vector<int> mv;
-            mv.resize(4);
-
-            mv[0] = static_cast<int>(level.to_ulong());
-            mv[1] = static_cast<int>(dir.to_ulong());
-
-            if (mv[1] < 6)
+            for (int j = 0; j < bytes; j++)
             {
-                std::bitset<3> offset_x(bitstream.substr(start + 4, 3));
-                std::bitset<3> offset_y(bitstream.substr(start + 7, 3));
-                mv[2] = static_cast<int>(offset_x.to_ulong() - 3);
-                mv[3] = static_cast<int>(offset_y.to_ulong() - 3);
-                start += 10;
+                unsigned char buffer;
+                ifs.read(reinterpret_cast<char*>(&buffer), sizeof(buffer));
+                bitstream += std::bitset<8>(buffer).to_string();
             }
-            else start += 4;
-            mvs.push_back(mv);
+            strs[i] = bitstream;
         }
-        return mvs;
+
+        return strs;
     }
 };
 

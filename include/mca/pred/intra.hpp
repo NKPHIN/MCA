@@ -4,25 +4,90 @@
 
 #ifndef INTRA_HPP
 #define INTRA_HPP
+
 #include "block.hpp"
-#include "mca/proc/crop.hpp"
+#include "mca/utils/math.hpp"
 
 namespace mca::prediction {
-    class IntraBlockTree final : public AbstractBlockTree {
+    class BlockMap {
     private:
-        [[nodiscard]] std::pair<std::vector<int>, double> search(const cv::PointI vertex, const int width, const int height) override
+        int rows = 0;
+        int cols = 0;
+
+        int MIN_BLOCK_SIZE = 0;
+        int MAX_BLOCK_SIZE = 0;
+
+        cv::Mat_C3 raw;
+        cv::Mat_C3 mca;
+
+        std::vector<std::vector<std::vector<int>>> mvs;
+        std::vector<std::vector<int>> vecs;
+        std::vector<std::vector<BlockNodePtr>> blocks;
+
+        void init()
+        {
+            const int width = mca[0].getCols();
+            const int height = mca[0].getRows();
+
+            rows = std::ceil(1.0 * height / MAX_BLOCK_SIZE);
+            cols = std::ceil(1.0 * width / MAX_BLOCK_SIZE);
+
+            blocks.resize(rows);
+            for (int i = 0; i < rows; i++)
+                blocks[i].resize(cols);
+        }
+
+        int countValidPixel(const cv::Region region)
+        {
+            const cv::PointI vertex = region.o();
+            const int width = region.getWidth();
+            const int height = region.getHeight();
+
+            int cnt = 0;
+            for (int x = vertex.getX(); x < vertex.getX() + width; x++)
+            {
+                for (int y = vertex.getY(); y < vertex.getY() + height; y++)
+                {
+                    unsigned char ch = mca[0].at(y, x);
+                    if (ch != 0) cnt++;
+                }
+            }
+            return cnt;
+        }
+
+        bool checkEmptyRegion(const cv::Region region)
+        {
+            const int cnt = countValidPixel(region);
+            const int width = region.getWidth();
+            const int height = region.getHeight();
+
+            return 1.0 * cnt / (width * height) < 0.9;
+        }
+
+        bool checkFullRegion(const cv::Region region)
+        {
+            const int cnt = countValidPixel(region);
+            const int width = region.getWidth();
+            const int height = region.getHeight();
+
+            return cnt == width * height;
+        }
+
+        std::pair<std::vector<int>, double> search(const cv::Region region)
         {
             std::vector<int> mv;
-            const std::vector<std::vector<int>> vecs = {{-76, -42}, {-76, 44}, {0, 86}, {76, 44}, {76, -42}, {0, -86}};
 
+            const cv::PointI vertex = region.o();
             const int cur_x = vertex.getX();
             const int cur_y = vertex.getY();
 
-            const auto total_region = cv::Region(0, 0, cols, rows);
-            const auto cur_region = cv::Region(cur_x, cur_y, width, height);
-            cv::Mat cur_block = cur[0].sub(cur_region);
+            const int width = region.getWidth();
+            const int height = region.getHeight();
 
-            double _psnr = 0;
+            const auto total_region = cv::Region(0, 0, raw[0].getCols(), raw[0].getRows());
+            cv::Mat cur_block = raw[0].sub(region);
+
+            double psnr = 0;
             for (int i = 0; i < vecs.size(); i++)
             {
                 const int offset_x = vecs[i][0];
@@ -41,33 +106,118 @@ namespace mca::prediction {
                         if (!total_region.contains(ref_region)) continue;
                         if (!checkFullRegion(ref_region)) continue;
 
-                        cv::Mat ref_block = cropped[0].sub(ref_region);
-                        double res = proc::psnr(cur_block, ref_block);
-                        if (res > _psnr)
+                        cv::Mat ref_block = mca[0].sub(ref_region);
+                        if (const double tmp = proc::PSNR(cur_block, ref_block); tmp > psnr)
                         {
-                            _psnr = res;
+                            psnr = tmp;
                             mv = {i, x - cur_x - offset_x, y - cur_y - offset_y};
                         }
                     }
                 }
             }
-            return std::make_pair(mv, _psnr);
+
+            std::vector<cv::Region> adjacent = {
+                cv::Region(cur_x - MAX_BLOCK_SIZE, cur_y, width, height),
+                cv::Region(cur_x, cur_y - MAX_BLOCK_SIZE, width, height),
+                cv::Region(cur_x - MAX_BLOCK_SIZE, cur_y - MAX_BLOCK_SIZE, width, height)
+            };
+
+            for (int i = 0; i < adjacent.size(); i++)
+            {
+                auto adj = adjacent[i];
+                if (adj.o().getX() < 0 || adj.o().getY() < 0)
+                    continue;
+                cv::Mat ref_block = mca[0].sub(adj);
+                if (const double tmp = proc::PSNR(cur_block, ref_block); tmp > psnr)
+                {
+                    psnr = tmp;
+                    mv = {7, i, 0};
+                }
+            }
+
+            return std::make_pair(mv, psnr);
         }
 
-        void restore(const cv::PointI vertex, const int width, const int height, const std::vector<int> mv) override
+        // std::pair<std::vector<int>, double> search(const cv::Region region)
+        // {
+        //     std::vector<int> mv;
+        //
+        //     const cv::PointI vertex = region.o();
+        //     const int cur_x = vertex.getX();
+        //     const int cur_y = vertex.getY();
+        //
+        //     const int width = region.getWidth();
+        //     const int height = region.getHeight();
+        //
+        //     const auto total_region = cv::Region(0, 0, raw[0].getCols(), raw[0].getRows());
+        //     cv::Mat cur_block = raw[0].sub(region);
+        //
+        //     double psnr = 0;
+        //     const int start_x = cur_x - 30;
+        //     const int end_x = cur_x + 30;
+        //     const int start_y = cur_y - 30;
+        //     const int end_y = cur_y + 30;
+        //
+        //     for (int x = start_x; x <= end_x; x++)
+        //     {
+        //         for (int y = start_y; y <= end_y; y++)
+        //         {
+        //             const auto ref_region = cv::Region(x, y, width, height);
+        //             if (!total_region.contains(ref_region)) continue;
+        //             if (!checkFullRegion(ref_region)) continue;
+        //
+        //             cv::Mat ref_block = mca[0].sub(ref_region);
+        //             if (const double tmp = proc::PSNR(cur_block, ref_block); tmp > psnr)
+        //             {
+        //                 psnr = tmp;
+        //                 mv = {x - cur_x, y - cur_y};
+        //             }
+        //         }
+        //     }
+        //     return std::make_pair(mv, psnr);
+        // }
+
+        void restore(const cv::PointI vertex, const int width, const int height, const std::vector<int>& mv)
         {
-            const std::vector<std::vector<int>> vecs = {{-76, -42}, {-76, 44}, {0, 86}, {76, 44}, {76, -42}, {0, -86}};
             const int cur_x = vertex.getX();
             const int cur_y = vertex.getY();
             const auto cur_region = cv::Region(cur_x, cur_y, width, height);
+            cv::Region target_region;
 
-            const int target_x = mv[1] + vecs[mv[0]][0] + cur_x;
-            const int target_y = mv[2] + vecs[mv[0]][1] + cur_y;
-            const cv::Region target_region(target_x, target_y, width, height);
-            cv::copyTo(cropped[0], cropped[0], cropped[0],target_region, cur_region);
+            if (mv[0] < 6)
+            {
+                const int target_x = mv[1] + vecs[mv[0]][0] + cur_x;
+                const int target_y = mv[2] + vecs[mv[0]][1] + cur_y;
+                target_region = cv::Region(target_x, target_y, width, height);
+            }
+            else if (mv[0] == 7)
+            {
+                const std::vector<cv::Region> adjacent = {
+                    cv::Region(cur_x - MAX_BLOCK_SIZE, cur_y, width, height),
+                    cv::Region(cur_x, cur_y - MAX_BLOCK_SIZE, width, height),
+                    cv::Region(cur_x - MAX_BLOCK_SIZE, cur_y - MAX_BLOCK_SIZE, width, height)
+                };
+                target_region = adjacent[mv[1]];
+            }
+            for (int i=0; i<1; i++)
+                cv::copyTo(mca[i], mca[i], mca[i],target_region, cur_region);
         }
 
-        void divideBlock(const BlockNodePtr &parent) override
+        // void restore(const cv::PointI vertex, const int width, const int height, const std::vector<int>& mv)
+        // {
+        //     const int cur_x = vertex.getX();
+        //     const int cur_y = vertex.getY();
+        //     const auto cur_region = cv::Region(cur_x, cur_y, width, height);
+        //
+        //     const int target_x = mv[0] + cur_x;
+        //     const int target_y = mv[1] + cur_y;
+        //     const auto target_region = cv::Region(target_x, target_y, width, height);
+        //
+        //     for (int i=0; i<3; i++)
+        //         cv::copyTo(mca[i], mca[i], mca[i],target_region, cur_region);
+        // }
+
+        void divideBlocks(const BlockNodePtr& parent) const
         {
             const int width = parent->getWidth();
             const int height = parent->getHeight();
@@ -102,155 +252,143 @@ namespace mca::prediction {
             }
         }
 
-        bool pruning(const BlockNodePtr &parent, const double psnr) override
+        static std::vector<int> readIntraMVData(const std::string& bitstream, int& pos)
         {
-            const int width = parent->getWidth();
-            const int height = parent->getHeight();
-            if (width > MAX_BLOCK_SIZE || height > MAX_BLOCK_SIZE) return false;
+            std::vector<int> vec;
+            const std::bitset<3> b_dir(bitstream.substr(pos, 3));
 
-            divideBlock(parent);
-
-            std::vector<std::pair<int, double>> vecs;
-            for (const auto &child : parent->getChildren())
+            if (const int dir = static_cast<int>(b_dir.to_ulong()); dir < 6)
             {
-                const int sub_width = child->getWidth();
-                const int sub_height = child->getHeight();
-                const cv::PointI vertex = child->getVertex();
+                const std::bitset<3> b_offset_x(bitstream.substr(pos+3, 3));
+                const std::bitset<3> b_offset_y(bitstream.substr(pos+6, 3));
 
-                const cv::Region region(vertex, sub_width, sub_height);
-                if (checkEmptyRegion(region) == false) continue;
-
-                auto [sub_block_mv, sub_block_psnr] = search(vertex, sub_width, sub_height);
-                if (!sub_block_mv.empty())
-                {
-                    double sub_block_mse = proc::psnr2mse(sub_block_psnr);
-                    int pixel_cnt = sub_width * sub_height;
-                    vecs.emplace_back(pixel_cnt, sub_block_mse);
-                }
+                const int offset_x = static_cast<int>(b_offset_x.to_ulong()) - 3;
+                const int offset_y = static_cast<int>(b_offset_y.to_ulong()) - 3;
+                vec = {dir, offset_x, offset_y};
+                pos += 9;
             }
-
-            double mse = 0;
-            int cnt = 0;
-            for (auto [fst, snd] : vecs)
+            else if (dir == 7)
             {
-                mse += fst * snd;
-                cnt += fst;
+                const std::bitset<2> b_index(bitstream.substr(pos+3, 2));
+                const int index = static_cast<int>(b_index.to_ulong());
+                vec = {dir, index};
+                pos += 5;
             }
-            if (cnt > 0)
-            {
-                mse /= cnt;
-                double sub_psnr = proc::mse2psnr(mse);
-                return sub_psnr - psnr < 0.5;
-            }
-            return true;
+            else pos += 3;
+
+            return vec;
         }
 
     public:
-        IntraBlockTree(const cv::Mat_C3& cur, const cv::Mat_C3& cropped)
+        BlockMap(const cv::Mat_C3 &raw_image, const cv::Mat_C3 &mca_image, const std::vector<std::vector<int>> &vecs, const std::pair<int, int> &block_size)
         {
-            this->cur = cur;
-            this->cropped = cropped;
+            this->raw = raw_image;
+            this->mca = mca_image;
+            this->vecs = vecs;
 
-            rows = cur[0].getRows();
-            cols = cur[0].getCols();
-            root = std::make_shared<BlockNode>(cv::PointI(0, 0), cols, rows);
+            this->MIN_BLOCK_SIZE = block_size.first;
+            this->MAX_BLOCK_SIZE = block_size.second;
 
-            IntraBlockTree::build(root, 0);
-            // std::cout << proc::psnr(this->cur[0], this->cropped[0]) << std::endl;
+            init();
         }
 
-        IntraBlockTree(const cv::Mat_C3& cropped, const std::vector<std::vector<int>>& mvs)
+        BlockMap(const cv::Mat_C3 &mca_image, const std::vector<std::vector<int>> &vecs, const std::pair<int, int> &block_size)
         {
-            this->cropped = cropped;
-            this->mvs = mvs;
+            this->mca = mca_image;
+            this->vecs = vecs;
 
-            rows = cropped[0].getRows();
-            cols = cropped[0].getCols();
-            root = std::make_shared<BlockNode>(cv::PointI(0, 0), cols, rows);
+            this->MIN_BLOCK_SIZE = block_size.first;
+            this->MAX_BLOCK_SIZE = block_size.second;
 
-            IntraBlockTree::rebuild(root, 0);
+            init();
         }
 
-        void build(const BlockNodePtr &ptr, int level) override
+        void build()
         {
-            const cv::PointI vertex = ptr->getVertex();
-            const int width = ptr->getWidth();
-            const int height = ptr->getHeight();
-
-            if (width <= MAX_BLOCK_SIZE && height <= MAX_BLOCK_SIZE)
+            for (int i = 0; i < rows; i++)
             {
-                const cv::Region region(vertex, width, height);
-                if (checkEmptyRegion(region) == false)
+                for (int j = 0; j < cols; j++)
                 {
-                    ptr->setUnValid();
-                    return;
-                }
+                    const cv::PointI vertex(j * MAX_BLOCK_SIZE, i * MAX_BLOCK_SIZE);
 
-                auto [cur_block_mv, cur_block_psnr] = search(vertex, width, height);
-                if ((width <= MIN_BLOCK_SIZE && height <= MIN_BLOCK_SIZE) || cur_block_psnr >= PSNR_THRESHOLD || pruning(ptr, cur_block_psnr))
-                {
-                    ptr->setLeaf();
-                    ptr->setMv(cur_block_mv);
-                    if (!cur_block_mv.empty())
+                    const int width = std::min((j + 1) * MAX_BLOCK_SIZE, mca[0].getCols()) - j * MAX_BLOCK_SIZE;
+                    const int height = std::min((i + 1) * MAX_BLOCK_SIZE, mca[0].getRows()) - i * MAX_BLOCK_SIZE;
+
+                    const cv::Region region(vertex, width, height);
+                    blocks[i][j] = std::make_shared<BlockNode>(vertex, width, height);
+
+                    if (!checkEmptyRegion(region)) continue;
+
+                    if (auto [mv, psnr] = search(region); psnr >= PSNR_THRESHOLD)
                     {
-                        restore(vertex, width, height, cur_block_mv);
-                        mvs.push_back({level, cur_block_mv[0], cur_block_mv[1], cur_block_mv[2]});
+                        restore(vertex, width, height, mv);
+                        mvs.push_back({{0, mv[0], mv[1], mv[2]}});
+                        continue;
                     }
-                    else mvs.push_back({level, 6});
-                    return;
-                }
-            }
 
-            if (ptr->getChildren().empty())
-                divideBlock(ptr);
-            for (const auto& child : ptr->getChildren())
-            {
-                if (width <= MAX_BLOCK_SIZE && height <= MAX_BLOCK_SIZE)
-                    build(child, level + 1);
-                else build(child, level);
-            }
-        }
-
-        void rebuild(const BlockNodePtr &ptr, int level) override
-        {
-            const cv::PointI vertex = ptr->getVertex();
-            const int width = ptr->getWidth();
-            const int height = ptr->getHeight();
-
-            if (width <= MAX_BLOCK_SIZE && height <= MAX_BLOCK_SIZE)
-            {
-                const cv::Region region(vertex, width, height);
-                if (checkEmptyRegion(region) == false)
-                {
-                    ptr->setUnValid();
-                    return;
-                }
-
-                if (level == mvs[index][0])
-                {
-                    if (const int dir = mvs[index][1]; dir < 6)
+                    divideBlocks(blocks[i][j]);
+                    std::vector<std::vector<int>> group;
+                    for (const auto& child : blocks[i][j]->getChildren())
                     {
-                        const int offset_x = mvs[index][2];
-                        const int offset_y = mvs[index][3];
-                        const std::vector cur_block_mv = {dir, offset_x, offset_y};
+                        const cv::PointI child_vertex = child->getVertex();
+                        const int child_width = child->getWidth();
+                        const int child_height = child->getHeight();
 
-                        ptr->setLeaf();
-                        ptr->setMv(cur_block_mv);
-                        restore(vertex, width, height, cur_block_mv);
+                        const cv::Region child_region(child_vertex, child_width, child_height);
+                        if (auto [child_mv, child_psnr] = search(child_region); !child_mv.empty())
+                        {
+                            restore(child_vertex, child_width, child_height, child_mv);
+                            group.push_back({1, child_mv[0], child_mv[1], child_mv[2]});
+                        }
+                        else group.push_back({1, 6});
                     }
-                    index++;
-                    return;
+                    mvs.push_back(group);
                 }
             }
+        }
 
-            divideBlock(ptr);
-            for (const auto& child : ptr->getChildren())
+        void rebuild(const std::string& bitstream)
+        {
+            int pos = 0;
+            for (int i = 0; i < rows; i++)
             {
-                if (width <= MAX_BLOCK_SIZE && height <= MAX_BLOCK_SIZE)
-                    rebuild(child, level + 1);
-                else rebuild(child, level);
+                for (int j = 0; j < cols; j++)
+                {
+                    const cv::PointI vertex(j * MAX_BLOCK_SIZE, i * MAX_BLOCK_SIZE);
+
+                    const int width = std::min((j + 1) * MAX_BLOCK_SIZE, mca[0].getCols()) - j * MAX_BLOCK_SIZE;
+                    const int height = std::min((i + 1) * MAX_BLOCK_SIZE, mca[0].getRows()) - i * MAX_BLOCK_SIZE;
+
+                    const cv::Region region(vertex, width, height);
+                    blocks[i][j] = std::make_shared<BlockNode>(vertex, width, height);
+
+                    if (!checkEmptyRegion(region)) continue;
+
+                    std::bitset<1> b_layer(bitstream[pos++]);
+                    if (const int layer = static_cast<int>(b_layer.to_ulong()); layer == 0)
+                    {
+                        std::vector<int> vec = readIntraMVData(bitstream, pos);
+                        if (!vec.empty()) restore(vertex, width, height, vec);
+                    }
+                    else if (layer == 1)
+                    {
+                        divideBlocks(blocks[i][j]);
+                        for (const auto& child : blocks[i][j]->getChildren())
+                        {
+                            const cv::PointI child_vertex = child->getVertex();
+                            const int child_width = child->getWidth();
+                            const int child_height = child->getHeight();
+
+                            std::vector<int> vec = readIntraMVData(bitstream, pos);
+                            if (!vec.empty()) restore(child_vertex, child_width, child_height, vec);
+                        }
+                    }
+                }
             }
         }
+
+        cv::Mat_C3 getMca() {return mca;}
+        std::vector<std::vector<std::vector<int>>> getMvs() {return mvs;}
     };
 }
 

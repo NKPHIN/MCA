@@ -14,6 +14,10 @@ int main(const int argc, char *argv[]) {
     parser.add("-calib", "calibration file path");
     parser.add("-patch", "the size of patch in mi");
     parser.add("-log", "generate log info and key params");
+    parser.add("-min_block_size", "min block size");
+    parser.add("-max_block_size", "max block size");
+    parser.add("-interval", "interval size");
+    parser.add("-bin", "binary file path");
 
     parser.parse();
 

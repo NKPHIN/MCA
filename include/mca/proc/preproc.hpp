@@ -15,58 +15,17 @@
 
 namespace fs = std::filesystem;
 namespace mca::proc {
-    inline void edge(cv::Mat_C3& src_image, cv::Mat_C3& mca_image, cv::Mat_C3& label_image, const mca::MI::layout_ptr& layout)
+    inline std::vector<std::vector<int>> getVecs(const std::string& seq_name)
     {
-        const int width = src_image[0].getCols();
-        const int height = src_image[0].getRows();
+        std::vector<std::vector<int>> vecs;
 
-        std::vector<double> zi, mu, theta;
-        zi.resize(100, 0);
-        mu.resize(100, 0);
-        theta.resize(100, 1.0);
+        if (seq_name == "Fujita2_2048x2048_300frames_8bit_yuv420.yuv" || seq_name == "Origami_2048x2048_300frames_8bit_yuv420.yuv")
+            vecs = {{14, 8}, {14, -8}, {0, -16}, {-14, -8}, {-14, 8}, {0, 16}};
+        else if (seq_name == "Boxer-IrishMan-Gladiator2_3840x2160_300frames_8bit_yuv420.yuv" || seq_name == "TempleBoatGiantR32_6464x4852_300frames_8bit_yuv420.yuv")
+            vecs = {{23, 13}, {23, -13}, {0, -26}, {-23, -13}, {-23, 13}, {0, 26}};
+        else vecs = {{-76, -42}, {-76, 44}, {0, 86}, {76, 44}, {76, -42}, {0, -86}};
 
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                unsigned char ch = label_image[0].at(y, x);
-                if (ch != 0) continue;
-
-                const cv::PointF closest_center = layout->closestMICenter(cv::PointF(x, y));
-                const int distance = static_cast<int>(dis(closest_center, cv::PointF(x, y)));
-
-                const int src_pixel = src_image[0].at(y, x);
-                const int pre_pixel = mca_image[0].at(y, x);
-
-                zi[distance] += static_cast<double>(pre_pixel * src_pixel);
-                mu[distance] += static_cast<double>(pre_pixel * pre_pixel);
-            }
-        }
-
-        for (int i = 0; i < 100; i++)
-        {
-            if (zi[i] != 0) theta[i] = zi[i] / mu[i];
-        }
-
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                unsigned char ch = label_image[0].at(y, x);
-                if (ch != 0) continue;
-
-                const auto fx = static_cast<float>(x);
-                const auto fy = static_cast<float>(y);
-
-                const cv::PointF closest_center = layout->closestMICenter(cv::PointF(fx, fy));
-                const int distance = static_cast<int>(dis(closest_center, cv::PointF(fx, fy)));
-
-                int pixel = mca_image[0].at(y, x);
-                pixel = std::min(static_cast<int>(pixel * theta[distance]), 255);
-
-                mca_image[0].set(y, x, static_cast<unsigned char>(pixel));
-            }
-        }
+        return vecs;
     }
 
     inline std::string get_ouput_path(const int width, const int height,
@@ -114,8 +73,18 @@ namespace mca::proc {
         int MCA_height = layout->getMCAHeight(patch_size);
         output_path = get_ouput_path(MCA_width, MCA_height, frames, input_path, output_dir, "pre");
 
+        std::string seq_name = config_parser.get("InputFile");
+        std::vector<std::vector<int>> vecs = getVecs(seq_name);
+
         std::ifstream ifs(input_path, std::ios::binary);
         std::ofstream ofs(output_path, std::ios::binary);
+
+        int interval = std::stoi(arg_parser.get("-interval"));
+        int min_block_size = std::stoi(arg_parser.get("-min_block_size"));
+        int max_block_size = std::stoi(arg_parser.get("-max_block_size"));
+        std::pair<int, int> block_size = std::make_pair(min_block_size, max_block_size);
+
+        cv::Mat_C3 MCA_INTRA_YUV;
         for (int i = 0; i < frames; i++)
         {
             cv::Mat_C3 YUV = cv::read(ifs, width, height);
@@ -126,13 +95,13 @@ namespace mca::proc {
             cv::Mat_C3 MCA_POST_YUV = proc::crop(MCA_YUV, layout, patch_size, proc::POST);
             cv::Mat_C3 MASK_YUV = MCA_POST_YUV;
 
-            prediction::IntraBlockTree block_tree(YUV, MCA_POST_YUV);
-            logger.writeIntraMVData(block_tree, i);
-
-            cv::Mat_C3 MCA_INTRA_YUV = block_tree.getCroppedMat();
-
-            for (int t=0; t<3; t++)
-                default_padding(MCA_INTRA_YUV[0], {{-76, -42}, {-76, 44}, {0, 86}, {76, 44}, {76, -42}, {0, -86}});
+            if (i % interval == 0)
+            {
+                prediction::BlockMap map(YUV, MCA_POST_YUV, vecs, block_size);
+                map.build();
+                logger.writeIntraMVData(map);
+                MCA_INTRA_YUV = map.getMca();
+            }
 
             logger.writeMetaData(YUV, MCA_INTRA_YUV, MASK_YUV, layout, i);
 

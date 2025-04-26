@@ -34,6 +34,7 @@ namespace mca::cv {
         int height;
 
     public:
+        Region() {width = height = 0;}
         explicit Region(const Rect<int> rect)
         {
             ltop = rect.o();

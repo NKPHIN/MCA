@@ -115,16 +115,15 @@ namespace mca::proc {
         }
     }
 
-    inline void padding(cv::Mat_C3& src, const mca::MI::layout_ptr& layout, const std::vector<std::vector<int>>& vecs, const std::vector<double> &theta)
+    inline void padding(cv::Mat_C3& src, const mca::MI::layout_ptr& layout,
+        const std::vector<std::vector<int>>& vecs, const std::vector<double> &theta, const std::string& bitstream,
+        const std::pair<int, int>& block_size)
     {
         cv::Mat_C3 label = src;
 
-        const std::string bin_path = R"(C:\WorkSpace\MPEG\MCA\test_0409\boys.bin)";
-        std::ifstream ifs(bin_path, std::ios::binary | std::ios::in);
-        const std::vector<std::vector<int>> mvs = proc::readIntraMVData(bin_path, 0);
-
-        const prediction::IntraBlockTree block_tree(src, mvs);
-        src = block_tree.getCroppedMat();
+        prediction::BlockMap map(src, vecs, block_size);
+        map.rebuild(bitstream);
+        src = map.getMca();
 
         for (int c = 0; c < 3; c++)
         {
