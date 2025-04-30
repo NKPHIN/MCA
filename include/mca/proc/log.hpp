@@ -132,7 +132,8 @@ namespace mca::proc {
                         first = false;
                         ofs << i << ",";
                     }
-                    ofs << theta[i] << ",";
+                    ofs << std::fixed << std::setprecision(3) << theta[i] << ",";
+                    // ofs << theta[i] << ",";
                 }
             }
             ofs << std::endl;

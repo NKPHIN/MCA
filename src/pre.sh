@@ -1,5 +1,5 @@
 # Boys2
-"C:\WorkSpace\C++\MCA\cmake-build-debug\MCA.exe" -proc Pre -i "C:\WorkSpace\MPEG\MCA\Sequence\Boys2_3976x2956_10frames_8bit_yuv420.yuv" -o "C:\WorkSpace\MPEG\MCA\test_0325\pre" \
+"C:\WorkSpace\C++\MCA\cmake-build-debug\MCA.exe" -proc Pre -i "C:\WorkSpace\MPEG\MCA\Sequence\Boys2_3976x2956_10frames_8bit_yuv420.yuv" -o "C:\WorkSpace\MPEG\MCA\test_0429\pre" \
 -config "C:\WorkSpace\C++\MCA\config\Boys2\Boys2.cfg" -calib "C:\WorkSpace\C++\MCA\config\Boys2\calib.xml" -patch 50 -log "C:\WorkSpace\C++\MCA\config\Boys2\Boys2.log"
 
 
