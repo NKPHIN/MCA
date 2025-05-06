@@ -114,16 +114,21 @@ namespace mca::proc {
         }
     }
 
-    inline void padding(cv::Mat_C3& src, const mca::MI::layout_ptr& layout, const std::vector<std::vector<int>>& vecs, const std::vector<double> &theta)
+    inline void padding(cv::Mat_C3& src, const mca::MI::layout_ptr& layout, const std::vector<std::vector<int>>& vecs,
+        const std::string& mode, const std::vector<double> &theta = {})
     {
         cv::Mat_C3 label = src;
         for (int c = 0; c < 3; c++)
         {
-            mca::proc::angle_padding(src[c], layout, vecs);
+            if (mode == "linear")
+                mca::proc::angle_padding(src[c], layout, vecs);
+            else if (mode == "none")
+                mca::proc::default_padding(src[c], vecs);
             mca::proc::default_padding(src[c], vecs);
             mca::proc::default_padding(src[c], vecs);
         }
-        mca::proc::edge_blurring(src, label, layout, theta);
+        if (mode == "linear")
+            mca::proc::edge_blurring(src, label, layout, theta);
     }
 };
 
