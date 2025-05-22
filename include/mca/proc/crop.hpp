@@ -13,11 +13,10 @@ namespace mca::proc {
     constexpr int PRE = 0;
     constexpr int POST = 1;
 
-    inline cv::Mat_C3 single_frame(cv::Mat_C3& src, const MI::layout_ptr& layout, int patch_size, const int mode)
+    inline cv::Mat_C3 crop(cv::Mat_C3& src, const MI::layout_ptr& layout, int patch_size, const int mode)
     {
         const int rows = layout->getRows();
         const int cols = layout->getCols();
-        const float diameter = layout->getDiameter();
 
         if (patch_size % 2 == 1) patch_size++;
 
@@ -58,23 +57,9 @@ namespace mca::proc {
                     std::swap(srcRoi, dstRoi);
 
                 for (int c = 0; c < 3; c++)
-                {
                     cv::copyTo(src[c], dst[c], srcRoi, dstRoi);
-                    if (mode == proc::POST)
-                        mca::proc::default_padding(dst[c], center, dstRoi, diameter);
-                }
             }
         }
-
-        // 扩散法填充边缘
-        if (mode == proc::POST)
-        {
-            const cv::PointF center = layout->getMI(rows / 2, cols / 2).getCenter();
-            const cv::PointI _center(static_cast<int>(center.getX()), static_cast<int>(center.getY()));
-            for (int c = 0; c < 3; c++)
-                mca::proc::edge_padding(dst[c], _center, dst_width, dst_height);
-        }
-
         return dst;
     }
 }

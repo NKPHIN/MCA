@@ -19,6 +19,7 @@ namespace mca::proc {
         const int dstWidth = std::stoi(config_parser.get("Width"));
         const int dstHeight = std::stoi(config_parser.get("Height"));
         int patch_size = std::stoi(config_parser.get("Patch"));
+        std::string optimization = config_parser.get("optimization");
 
         const std::string output_path = get_ouput_path(dstWidth, dstHeight, frames,
             input_path, output_dir, "post");
@@ -41,13 +42,23 @@ namespace mca::proc {
         int width = layout->getMCAWidth(patch_size);
         int height = layout->getMCAHeight(patch_size);
 
-        for (int i = 0; i < frames; i++)
+        for (int i = 0; i < 1; i++)
         {
             cv::Mat_C3 YUV = cv::read(ifs, width, height);
             if (rotation < std::numbers::pi / 4)
                 YUV = cv::Transpose(YUV);
 
-            cv::Mat_C3 MCA_YUV = proc::single_frame(YUV, layout, patch_size, proc::POST);
+            cv::Mat_C3 MCA_YUV = proc::crop(YUV, layout, patch_size, proc::POST);
+
+            std::vector<std::vector<int>> vecs = proc::readVectors(config_parser);
+            if (optimization == "linear")
+            {
+                std::vector<double> theta = proc::readMetaData(config_parser, i);
+                proc::padding(MCA_YUV, layout, vecs, optimization, theta);
+            }
+            else if (optimization == "none")
+                proc::padding(MCA_YUV, layout, vecs, optimization);
+
             if (rotation < std::numbers::pi / 4)
                 MCA_YUV = cv::Transpose(MCA_YUV);
 

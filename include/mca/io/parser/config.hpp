@@ -60,6 +60,10 @@ namespace mca::parser {
                     value.erase(0, value.find_first_not_of(" \t"));
                     value.erase(value.find_last_not_of(" \t") + 1);
 
+                    if (!value.empty() && value.back() == '\r') {
+                        value.pop_back(); // 删除最后一个字符
+                    }
+
                     // 存储键值对
                     config[key] = value;
                 }

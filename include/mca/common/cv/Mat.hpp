@@ -15,7 +15,7 @@ namespace mca::cv {
     private:
         int rows = 0;
         int cols = 0;
-        std::vector<char> data;
+        std::vector<unsigned char> data;
 
     public:
         Mat(const int rows, const int cols)
@@ -30,30 +30,30 @@ namespace mca::cv {
 
         [[nodiscard]] int size() const {return rows * cols;}
 
-        char* getData() { return data.data();}
+        unsigned char* getData() { return data.data();}
 
-        std::vector<char> operator[](const int row)   // start from 0
+        std::vector<unsigned char> operator[](const int row)   // start from 0
         {
             const int start = row * cols;
             const int end = start + cols;
 
-            return std::vector<char>{data.begin()+start, data.begin()+end};
+            return std::vector<unsigned char>{data.begin()+start, data.begin()+end};
         }
 
-        char& at(const int row, const int col)
+        unsigned char& at(const int row, const int col)
         {
             return data[row * cols + col];
         }
 
-        void set(const int row, const int col, const char value)
+        void set(const int row, const int col, const unsigned char value)
         {
             data[row * cols + col] = value;
         }
 
-        [[nodiscard]] bool contains(Point<int> p) const
+        [[nodiscard]] bool contains(const Point<int> p) const
         {
-            int x = p.getX();
-            int y = p.getY();
+            const int x = p.getX();
+            const int y = p.getY();
             if (x < 0 || x >= cols || y < 0 || y >= rows) return false;
             return true;
         }
@@ -74,8 +74,8 @@ namespace mca::cv {
         if (!srcRoi.match(dstRoi)) return false;
         if (!src.contains(srcRoi) || !dst.contains(dstRoi)) return false;
 
-        const char* srcData = src.getData();
-        char* dstData = dst.getData();
+        const unsigned char* srcData = src.getData();
+        unsigned char* dstData = dst.getData();
 
         const cv::Point<int> src_o = srcRoi.o();
         const cv::Point<int> dst_o = dstRoi.o();
@@ -87,7 +87,8 @@ namespace mca::cv {
             const int src_start = (src_o.getY() + i) * src.getCols() + src_o.getX();
             const int dst_start = (dst_o.getY() + i) * dst.getCols() + dst_o.getX();
 
-            strncpy(dstData + dst_start, srcData + src_start, sizeof(char)*width);
+            strncpy(reinterpret_cast<char *>(dstData + dst_start),
+                reinterpret_cast<const char *>(srcData + src_start), sizeof(char)*width);
         }
 
         return true;
@@ -100,8 +101,8 @@ namespace mca::cv {
 
         cv::Mat res(cols, rows);
 
-        const char* src_data = src.getData();
-        char* dst_data = res.getData();
+        const unsigned char* src_data = src.getData();
+        unsigned char* dst_data = res.getData();
         for (int i = 0; i < rows; i++)
         {
             for (int j = 0; j < cols; j++)

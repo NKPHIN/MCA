@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 3.28)
 project(MCA)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -26,6 +26,8 @@ add_executable(MCA src/main.cpp
         include/mca/common/cv/Rect.hpp
         include/mca/common/layout/TSPCLayout.hpp
         include/mca/common/layout/RaytrixLayout.hpp
-        include/mca/proc/frame.hpp
+        include/mca/proc/crop.hpp
         include/mca/proc/padding.hpp
+        include/mca/proc/log.hpp
+        include/mca/utils/math.hpp
 )

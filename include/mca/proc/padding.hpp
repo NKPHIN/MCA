@@ -9,82 +9,126 @@
 #include <queue>
 
 #include "mca/common/cv/cv2.hpp"
+#include "mca/utils/math.hpp"
 
 namespace mca::proc {
-    inline bool in_circle(const cv::PointI p, const cv::PointF center, const float diameter)
+    inline void default_padding(cv::Mat& src, const std::vector<std::vector<int>>& vecs)
     {
-        const float delta_x = static_cast<float>(p.getX()) - center.getX();
-        const float delta_y = static_cast<float>(p.getY()) - center.getY();
+        const int rows = src.getRows();
+        const int cols = src.getCols();
 
-        const float dis = std::sqrt(delta_x * delta_x + delta_y * delta_y);
-        return dis <= diameter / 2;
-    }
-
-    inline void default_padding(cv::Mat& src, cv::PointF center, const cv::Region rect, float diameter)
-    {
-        cv::PointI ltop = rect.o();
-        cv::PointI rtop = rect.rtop();
-        cv::PointI lbot = rect.lbot();
-        cv::PointI rbot = rect.rbot();
-
-        const std::vector<cv::PointI> dir = {{-1, 0}, {0, 1}, {1, 0}, {0, -1}};
-        const std::vector<cv::PointI> contour = {ltop, lbot, rbot, rtop};
-
-        int index = 0;
-        cv::PointI start = ltop;
-        while (index < 4)
+        for (int x = 0; x < cols; x++)
         {
-            for (int d = 0; d < 20; d++)
+            for (int y = 0; y < rows; y++)
             {
-                cv::PointI cur = start + dir[index] * d;
-                if (in_circle(cur, center, diameter))
-                {
-                    char cur_value = src.at(cur.getY(), cur.getX());
-                    if (cur_value != 0) continue;
+                unsigned char ch = src.at(y, x);
+                if (ch != 0) continue;
 
-                    const char src_value = src.at(start.getY(), start.getX());
-                    src.set(cur.getY(), cur.getX(), src_value);
+                int sum = 0, cnt = 0;
+                for (auto vec : vecs)
+                {
+                    const int ux = x + vec[0];
+                    const int uy = y + vec[1];
+
+                    if (ux < 0 || ux >= cols || uy < 0 || uy >= rows || src.at(uy, ux) == 0) continue;
+
+                    cnt++;
+                    sum += src.at(uy, ux);
                 }
-                else break;
+                if (cnt != 0) sum /= cnt;
+                src.set(y, x, static_cast<unsigned char>(sum));
             }
-            start = start + dir[(index + 1) % 4];
-            if (start == contour[(index + 1) % 4]) index++;
         }
     }
 
-    inline void edge_padding(cv::Mat& src, cv::PointI center, int width, int height)
+    inline void angle_padding(cv::Mat& src, const mca::MI::layout_ptr& layout, const std::vector<std::vector<int>>& vecs)
     {
-        std::queue<cv::PointI> Q;
-        Q.emplace(center);
+        const int rows = src.getRows();
+        const int cols = src.getCols();
 
-        cv::Mat vis(height, width);
-        vis.set(center.getY(), center.getX(), 1);
-
-        const std::vector<cv::PointI> dirs = {{-1, 0}, {0, 1}, {1, 0}, {0, -1}};
-        while (!Q.empty())
+        for (int x = 0; x < cols; x++)
         {
-            cv::PointI cur = Q.front();
-            for (auto dir : dirs)
+            for (int y = 0; y < rows; y++)
             {
-                const int next_x = cur.getX() + dir.getX();
-                const int next_y = cur.getY() + dir.getY();
+                unsigned char ch = src.at(y, x);
+                if (ch != 0) continue;
 
-                if (next_x < 0 || next_x >= width || next_y < 0 || next_y >= height || vis.at(next_y, next_x) == 1)
-                    continue;
+                const auto fx = static_cast<float>(x);
+                const auto fy = static_cast<float>(y);
 
-                char val = src.at(next_y, next_x);
-                if (val == 0)
+                const cv::PointF closest_center = layout->closestMICenter(cv::PointF(fx, fy));
+                const double angle = ang(closest_center, cv::PointF(fx, fy));
+
+                double distance = dis(closest_center, cv::PointF(fx, fy));
+                if (distance > layout->getDiameter() * 0.5) continue;
+
+                int offset = 0;
+                if (-30 <= angle && angle < 30) offset = 0;
+                else if (30 <= angle && angle < 90) offset = 1;
+                else if (90 <= angle && angle < 150) offset = 2;
+                else if (150 <= angle && angle <= 180 || -180 <= angle  && angle < -150) offset = 3;
+                else if (-150 <= angle && angle < -90) offset = 4;
+                else if (-90 <= angle && angle < -30) offset = 5;
+
+                int sum = 0, cnt = 0;
+                for (int i=0; i<2; i++)
                 {
-                    const char cur_value = src.at(cur.getY(), cur.getX());
-                    src.set(next_y, next_x, cur_value);
-                }
+                    const auto& vec = vecs.at((offset + i) % 6);
+                    const int ux = x + vec[0];
+                    const int uy = y + vec[1];
 
-                cv::PointI next(next_x, next_y);
-                Q.emplace(next);
-                vis.set(next.getY(), next.getX(), 1);
+                    if (ux < 0 || ux >= cols || uy < 0 || uy >= rows || src.at(uy, ux) == 0) continue;
+
+                    cnt++;
+                    sum += src.at(uy, ux);
+                }
+                if (cnt != 0) sum /= cnt;
+                src.set(y, x, static_cast<unsigned char>(sum));
             }
-            Q.pop();
         }
+    }
+
+    inline void edge_blurring(cv::Mat_C3& pre, cv::Mat_C3& label, const mca::MI::layout_ptr& layout, const std::vector<double> &theta)
+    {
+        const int width = pre[0].getCols();
+        const int height = pre[0].getRows();
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                unsigned char ch = label[0].at(y, x);
+                if (ch != 0) continue;
+
+                const auto fx = static_cast<float>(x);
+                const auto fy = static_cast<float>(y);
+
+                const cv::PointF closest_center = layout->closestMICenter(cv::PointF(fx, fy));
+                const int distance = static_cast<int>(dis(closest_center, cv::PointF(fx, fy)));
+
+                int pixel = pre[0].at(y, x);
+                pixel = std::min(static_cast<int>(pixel * theta[distance]), 255);
+
+                pre[0].set(y, x, static_cast<unsigned char>(pixel));
+            }
+        }
+    }
+
+    inline void padding(cv::Mat_C3& src, const mca::MI::layout_ptr& layout, const std::vector<std::vector<int>>& vecs,
+        const std::string& mode, const std::vector<double> &theta = {})
+    {
+        cv::Mat_C3 label = src;
+        for (int c = 0; c < 3; c++)
+        {
+            if (mode == "linear")
+                mca::proc::angle_padding(src[c], layout, vecs);
+            else if (mode == "none")
+                mca::proc::default_padding(src[c], vecs);
+            mca::proc::default_padding(src[c], vecs);
+            mca::proc::default_padding(src[c], vecs);
+        }
+        if (mode == "linear")
+            mca::proc::edge_blurring(src, label, layout, theta);
     }
 };
 
