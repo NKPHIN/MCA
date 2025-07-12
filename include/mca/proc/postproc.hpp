@@ -42,7 +42,7 @@ namespace mca::proc {
         int width = layout->getMCAWidth(patch_size);
         int height = layout->getMCAHeight(patch_size);
 
-        for (int i = 0; i < 1; i++)
+        for (int i = 0; i < frames; i++)
         {
             cv::Mat_C3 YUV = cv::read(ifs, width, height);
             if (rotation < std::numbers::pi / 4)
@@ -56,8 +56,9 @@ namespace mca::proc {
                 std::vector<double> theta = proc::readMetaData(config_parser, i);
                 proc::padding(MCA_YUV, layout, vecs, optimization, theta);
             }
-            else if (optimization == "none")
-                proc::padding(MCA_YUV, layout, vecs, optimization);
+            // else if (optimization == "none")
+            //     proc::padding(MCA_YUV, layout, vecs, optimization);
+            else proc::padding(MCA_YUV, layout, vecs, optimization);
 
             if (rotation < std::numbers::pi / 4)
                 MCA_YUV = cv::Transpose(MCA_YUV);

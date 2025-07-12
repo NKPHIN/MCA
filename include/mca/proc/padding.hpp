@@ -12,6 +12,36 @@
 #include "mca/utils/math.hpp"
 
 namespace mca::proc {
+    inline void single_copy(cv::Mat& src)
+    {
+        const int rows = src.getRows();
+        const int cols = src.getCols();
+
+        int sum = 0, cnt = 0;
+        for (int x = 0; x < cols; x++)
+        {
+            for (int y = 0; y < rows; y++)
+            {
+                unsigned char ch = src.at(y, x);
+                if (ch == 0) continue;
+
+                sum += ch;
+                cnt++;
+            }
+        }
+
+        int avg = sum / cnt;
+        for (int x=0; x<cols; x++)
+        {
+            for (int y=0; y<rows; y++)
+            {
+                unsigned char ch = src.at(y, x);
+                if (ch == 0)
+                    src.set(y, x, static_cast<unsigned char>(avg));
+            }
+        }
+    }
+
     inline void default_padding(cv::Mat& src, const std::vector<std::vector<int>>& vecs)
     {
         const int rows = src.getRows();
@@ -118,6 +148,13 @@ namespace mca::proc {
         const std::string& mode, const std::vector<double> &theta = {})
     {
         cv::Mat_C3 label = src;
+        if (mode == "average")
+        {
+            for (int c=0; c<3; c++)
+                mca::proc::single_copy(src[c]);
+            return;
+        }
+
         for (int c = 0; c < 3; c++)
         {
             if (mode == "linear")
