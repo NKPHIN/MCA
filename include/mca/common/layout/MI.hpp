@@ -10,6 +10,9 @@
 #include "mca/io/parser/calib.hpp"
 
 namespace mca::MI {
+    /**
+     * @brief The implementation of data type 'MicroImage'
+     */
     class MicroImage {
     private:
         float diameter;
@@ -32,7 +35,12 @@ namespace mca::MI {
         }
     };
 
-
+    /**
+     * @brief The implementation of module 'Microimage Center Localization' and 'Microimage Block Re-localization'
+     *
+     * @note This class is the base class of both 'TSPCLayout' and 'RaytrixLayout'
+     *       You must instantiate the appropriate subclass depend on the sequence type.
+     */
     class AbstractMILayout{
     protected:
         int rows = 0;
@@ -55,29 +63,79 @@ namespace mca::MI {
     public:
         virtual ~AbstractMILayout() = default;
 
+        /**
+         * @brief Return the corresponding Microimage for the given row and column indice.
+         *
+         * @param row The row index
+         * @param col The col index
+         * @return Corresponding Microimage, include diameter and center coordinates.
+         */
         [[nodiscard]] MicroImage getMI(const int row, const int col) const {return layout[row * cols + col];}
 
+        /**
+         * @return The total number of Microimage rows.
+         */
         [[nodiscard]] int getRows() const {return rows;}
+
+        /**
+         * @return The total number of Microimage columns.
+         */
         [[nodiscard]] int getCols() const {return cols;}
+
+        /**
+         * @return The width of original lenslet image in pixels.
+         */
         [[nodiscard]] int getWidth() const {return width;}
+
+        /**
+         * @return The height of original lenslet image in pixels.
+         */
         [[nodiscard]] int getHeight() const {return height;}
+
+        /**
+         * @return The diameter of Microimage.
+         */
         [[nodiscard]] float getDiameter() const {return diameter;}
 
+        /**
+         * @brief Since the number of Microimage in odd column and even column may be different,
+         *        you need to obtain them respectively.
+         *
+         * @return The number of Microimage in odd(first) column.
+         */
         [[nodiscard]] int getFirstColRows() const {return first_col_rows;}
+
+        /**
+         * @return The number of Microimage in even column.
+         */
         [[nodiscard]] int getSecondColRows() const {return second_col_rows;}
 
+        /**
+         * @param patch_size The MCA patch size in pixels.
+         * @return The width of image cropped by MCA module in pixels.
+         */
         [[nodiscard]] virtual int getMCAWidth(int patch_size) const
         {
             if (patch_size % 2 == 1) patch_size++;
             return patch_size * cols;
         }
 
+        /**
+         * @param patch_size The MCA patch size in pixels.
+         * @return The height of image cropped by MCA module in pixels.
+         */
         [[nodiscard]] virtual int getMCAHeight(int patch_size) const
         {
             if (patch_size % 2 == 1) patch_size++;
             return patch_size * rows;
         }
 
+        /**
+         * @brief Return the corresponding row and column indices depend on Microimage center.
+         *
+         * @param center The center coordinate of Microimage
+         * @return A pair of corresponding row and column indices.
+         */
         [[nodiscard]] std::pair<int, int> getMIRowColIndex(const cv::PointF center) const
         {
             const int approx_col = static_cast<int>(center.getX() / (diameter * std::sqrt(3) / 2));
@@ -96,6 +154,11 @@ namespace mca::MI {
             return std::make_pair(i, j);
         }
 
+        /**
+         * @brief Returns the coordinates of the MI center closest to the current point.
+         * @param cur current point coordinate (x, y)
+         * @return closest Microimage center coordinate (cx, cy)
+         */
         [[nodiscard]] cv::PointF closestMICenter(const cv::PointF cur) const
         {
             const int approx_col = static_cast<int>(cur.getX() / (diameter * std::sqrt(3) / 2));

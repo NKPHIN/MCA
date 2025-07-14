@@ -11,6 +11,9 @@
 #include "mca/io/parser/parser.hpp"
 
 namespace mca::proc {
+    /**
+     * @brief This class is used to generate Metadata(i.e. <seq_name>.log file)
+     */
     class Logger {
     private:
         int frames;
@@ -20,6 +23,14 @@ namespace mca::proc {
         std::string log_path;
         std::vector<std::vector<int>> vecs;
 
+        /**
+         * @brief Generates the corresponding prediction vector based on the sequence type.
+         * @param seq_name The name of standard test sequence.
+         *
+         * @deprecated Since MCA lacks its own config file, the prediction vector is defined in this way
+         *             writing it directly on the command line would be too long
+         *             This method will be deprecated in the future.
+         */
         void initVecs(const std::string& seq_name)
         {
             if (seq_name == "Boys2_3976x2956_300frames_8bit_yuv420.yuv")
@@ -32,6 +43,11 @@ namespace mca::proc {
         }
 
     public:
+        /**
+         * @brief Read parameter from command line and <seq_name>.cfg file.
+         * @param arg_parser The parser used to read data from command line.
+         * @param config_parser The parser used to read data from <seq_name>.cfg file.
+         */
         Logger(parser::ArgParser& arg_parser, parser::ConfigParser& config_parser)
         {
             frames = std::stoi(config_parser.get("FramesToBeEncoded"));
@@ -44,6 +60,10 @@ namespace mca::proc {
             initVecs(seq_name);
         }
 
+        /**
+         * @brief Write basic metadata (not include metadata used to Edge Pxiels Optimization) to <seq_name>.log file.
+         * @param calib_parser The parser used to read layout information from <seq_name>.xml file.
+         */
         void writeBasicData(parser::Calibration::CalibParser& calib_parser) const
         {
             auto ofs = std::ofstream(log_path);
@@ -79,6 +99,17 @@ namespace mca::proc {
             ofs.close();
         }
 
+        /**
+         * @brief The implementation of module 'Edge Pixel Fitting'.
+         *
+         * @param src_image The original lenslet image with Y、U、V channels.
+         * @param mca_image The MCA image with Y、U、V channels.
+         * @param layout The corresponding layout of sequence.
+         * @param index The frame index in video sequence.
+         *
+         * @note All metadata will be written into file.
+         *       The file path is declared in parameter 'log_path' of class 'Logger'
+         */
         void writeMetaData(cv::Mat_C3& src_image, cv::Mat_C3& mca_image, const mca::MI::layout_ptr& layout, const int index) const
         {
             auto ofs = std::ofstream(log_path, std::ios::app);
@@ -141,6 +172,10 @@ namespace mca::proc {
         }
     };
 
+    /**
+     * @param log_parser The parser used to read metadata from <seq_name>.log file.
+     * @return 6 corresponding prediction vectors.
+     */
     inline std::vector<std::vector<int>> readVectors(mca::parser::ConfigParser& log_parser)
     {
         std::vector<std::vector<int>> vecs;
@@ -164,6 +199,13 @@ namespace mca::proc {
         return vecs;
     }
 
+    /**
+     * @brief Read metadata used by module Edge Pixel Optimization from <seq_name>.log file.
+     *
+     * @param log_parser The parser used to read metadata from <seq_name>.log file.
+     * @param index The frame index of video sequence.
+     * @return A set of parameters(double type), which is used to optimize the edge pixels.
+     */
     inline std::vector<double> readMetaData(mca::parser::ConfigParser& log_parser, const int index)
     {
         std::vector<double> theta;

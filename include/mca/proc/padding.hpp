@@ -12,6 +12,15 @@
 #include "mca/utils/math.hpp"
 
 namespace mca::proc {
+    /**
+     * @brief The padding method in Module 'Edge Pixel Estimation'
+     *        Used to estimate pixel values outside the MI region.
+     *
+     * @param src The re-aligned lenslet image with only 1 channel.
+     * @param vecs The corresponding 6 prediction vectors.
+     *
+     * @note The input 'src' a reference, so operations are performed directly on the original input.
+     */
     inline void default_padding(cv::Mat& src, const std::vector<std::vector<int>>& vecs)
     {
         const int rows = src.getRows();
@@ -41,6 +50,16 @@ namespace mca::proc {
         }
     }
 
+    /**
+     * @brief The padding method in Module 'Edge Pixel Estimation'
+     *        Used to estimate pixel values inside the MI region (dropped in MCA preprocessing)
+     *
+     * @param src The re-aligned lenslet image with only 1 channel.
+     * @param vecs The corresponding 6 prediction vectors.
+     * @param layout The layout of corresponding sequence.
+     *
+     * @note The input 'src' a reference, so operations are performed directly on the original input.
+     */
     inline void angle_padding(cv::Mat& src, const mca::MI::layout_ptr& layout, const std::vector<std::vector<int>>& vecs)
     {
         const int rows = src.getRows();
@@ -88,6 +107,15 @@ namespace mca::proc {
         }
     }
 
+    /**
+     * @brief The implementation of module 'Edge Pixel Optimization'.
+     *
+     * @param pre The Reconstructed lenslet image outputted by module 'Edge Pixel Estimation'
+     *            with Y、U、V channels.
+     * @param label The re-aligned lenslet image with Y、U、V channels. Only indicate which pixel is needed to optimization.
+     * @param layout The layout of corresponding sequence.
+     * @param theta The fitting metadata outputted by module 'Edge Pixel Fitting'.
+     */
     inline void edge_blurring(cv::Mat_C3& pre, cv::Mat_C3& label, const mca::MI::layout_ptr& layout, const std::vector<double> &theta)
     {
         const int width = pre[0].getCols();

@@ -13,6 +13,21 @@ namespace mca::proc {
     constexpr int PRE = 0;
     constexpr int POST = 1;
 
+    /**
+     * @brief The implementation of Module 'MCA'.
+     *
+     * @param src The original lenslet image with Y、U、V channels when mode='Pre' OR
+     *            The MCA image with Y、U、V channels when mode='Post'
+     *
+     * @param layout The corresponding layout of sequence.
+     * @param patch_size The MCA patch size in pixels.
+     * @param mode Only 2 values are accepted:
+     *             'Pre' for MCA preprocessing.
+     *             'Post' for MCA postprocessing.
+     *
+     * @return The MCA image with Y、U、V channels when mode='Pre' OR
+     *         The re-aligned lenslet image with Y、U、V channels when mode='Post'
+     */
     inline cv::Mat_C3 crop(cv::Mat_C3& src, const MI::layout_ptr& layout, int patch_size, const int mode)
     {
         const int rows = layout->getRows();
