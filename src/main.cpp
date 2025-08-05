@@ -1,45 +1,114 @@
 #include <iostream>
-#include "mca.hpp"
-#include "mca/proc/postproc.hpp"
+
+#include "mca/io/parser/parser.hpp"
+#include "mca/module/common/ConfigLoader.hpp"
+#include "mca/module/pipeline.hpp"
+
+using namespace mca::module;
+using namespace mca;
+
+
+void encoder_workflow(common::Dict config)
+{
+    encoder::YUV420Loader yuv420_loader;
+    const auto raw_video = yuv420_loader.exec(config);
+
+    common::LocalizationModule localization;
+    const auto layout = localization.exec(config);
+
+    const auto frames = std::any_cast<int>(config["frames"]);
+    const auto opt = std::any_cast<int>(config["optimize"]);
+
+    std::vector<cv::Mat_C3> output_video;
+    std::vector<std::vector<double>> thetas;
+    for (int i = 0; i < frames; i++)
+    {
+        encoder::MCAModule mca;
+        const auto mca_frame = mca.exec(raw_video[i], layout, config);
+        output_video.push_back(mca_frame);
+
+        if (opt == 0) continue;
+
+        common::RelocalizationModule reloc;
+        const auto reloc_frame = reloc.exec(mca_frame, layout, config);
+
+        common::EstimationModule estimation;
+        const auto recon_frame = estimation.exec(reloc_frame, layout, config);
+
+        encoder::FittingModule fitting;
+        auto theta = fitting.exec(raw_video[i], reloc_frame, recon_frame, layout);
+        thetas.push_back(theta);
+    }
+
+    common::YUV420Writer yuv420_writer;
+    yuv420_writer.exec(output_video, layout, config);
+
+    encoder::MetaDataWriter metadata_writer;
+    metadata_writer.exec(thetas, config);
+
+    std::cout << "done" << std::endl;
+}
+
+
+void decode_workflow(common::Dict config)
+{
+    common::LocalizationModule localization;
+    const auto layout = localization.exec(config);
+
+    decoder::YUV420Loader yuv420_loader;
+    const auto mca_video = yuv420_loader.exec(layout, config);
+
+    const auto opt = std::any_cast<int>(config["optimize"]);
+    std::vector<std::vector<double>> thetas;
+
+    if (opt == 1)
+    {
+        decoder::MetaDataLoader metadata_loader;
+        thetas = metadata_loader.exec(config);
+    }
+
+    const auto frames = std::any_cast<int>(config["frames"]);
+    std::vector<cv::Mat_C3> output_video;
+
+    for (int i = 0; i < frames; i++)
+    {
+        common::RelocalizationModule reloc;
+        const auto reloc_frame = reloc.exec(mca_video[i], layout, config);
+
+        common::EstimationModule estimation;
+        const auto recon_frame = estimation.exec(reloc_frame, layout, config);
+
+        if (opt == 1)
+        {
+            decoder::OptimizeModule optimize;
+            const auto output_frame = optimize.exec(recon_frame, reloc_frame, thetas[i], layout);
+            output_video.push_back(output_frame);
+        }
+        else output_video.push_back(recon_frame);
+    }
+
+    common::YUV420Writer yuv420_writer;
+    yuv420_writer.exec(output_video, layout, config);
+
+    std::cout << "done" << std::endl;
+}
 
 
 int main(const int argc, char *argv[]) {
-    mca::parser::ArgParser parser(argc, argv);
+    parser::ArgParser arg_parser(argc, argv);
 
-    parser.setHelp("--help");
-    parser.add("-proc", "Pre or Post");
-    parser.add("-i", "input yuv file path");
-    parser.add("-o", "output yuv file path");
-    parser.add("-config", "config file path");
-    parser.add("-calib", "calibration file path");
-    parser.add("-patch", "the size of patch in mi");
-    parser.add("-log", "generate log info and key params");
+    arg_parser.setHelp("--help");
+    arg_parser.add("-config", "config file path");
+    arg_parser.parse();
 
-    parser.parse();
+    common::ConfigLoader config_loader;
+    const std::string config_path = arg_parser.get("-config");
+    auto config = config_loader.exec(config_path);
 
-    if (parser.get("-proc") == "Pre")
-    {
-        std::string config_path = parser.get("-config");
-        mca::parser::ConfigParser config(config_path);
-        if (config.load() != -1)
-            std::cout << "Loaded config file: " << config_path << std::endl;
+    const auto mode = std::any_cast<int>(config["mode"]);
 
-        std::string calib_path = parser.get("-calib");
-        mca::parser::Calibration::CalibParser calib(calib_path);
-        if (calib.load() != -1)
-            std::cout << "Loaded calibration file: " << calib_path << std::endl;
-
-        mca::proc::preproc(parser, config, calib);
-    }
-    else if (parser.get("-proc") == "Post")
-    {
-        std::string log_path = parser.get("-log");
-        mca::parser::ConfigParser config(log_path);
-
-        if (config.load() != -1)
-            std::cout << "Loaded config file: " << log_path << std::endl;
-        mca::proc::postproc(parser, config);
-    }
+    if (mode == 0) encoder_workflow(config);
+    else decode_workflow(config);
 
     return 0;
 }

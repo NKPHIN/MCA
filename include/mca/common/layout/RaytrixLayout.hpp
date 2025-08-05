@@ -86,43 +86,14 @@ namespace mca::MI {
         }
 
     public:
-        RaytrixLayout(const int width, const int height, parser::Calibration::CalibParser parser)
+        RaytrixLayout(const int width, const int height, std::unordered_map<std::string, std::any> config)
         {
             this->width = width;
             this->height = height;
-            rotation = std::stof(parser.search("rotation"));
-            diameter = std::stof(parser.search("diameter"));
+            rotation = std::any_cast<float>(config["rotation"]);
+            diameter = std::any_cast<float>(config["diameter"]);
 
-            const float offset_x = std::stof(parser.search("offset", "x"));
-            const float offset_y = std::stof(parser.search("offset", "y"));
-
-            float center_x = static_cast<float>(width) / 2 + offset_x;
-            float center_y = static_cast<float>(height) / 2 - offset_y;
-
-            if (rotation < std::numbers::pi / 4)
-            {
-                std::swap(this->width, this->height);
-                std::swap(center_x, center_y);
-            }
-            center = cv::Point(center_x, center_y);
-
-            y_unit_offset = diameter;
-            x_unit_offset = static_cast<float>(diameter * std::sqrt(3) / 2);
-
-            calculateLeftTop();
-            calculateRowCol();
-            RaytrixLayout::calculateLayout();
-        }
-
-        RaytrixLayout(const int width, const int height, parser::ConfigParser parser)
-        {
-            this->width = width;
-            this->height = height;
-            rotation = std::stof(parser.get("rotation"));
-            diameter = std::stof(parser.get("diameter"));
-
-            const float offset_x = std::stof(parser.get("offsetx"));
-            const float offset_y = std::stof(parser.get("offsety"));
+            const auto [offset_x, offset_y] = std::any_cast<std::pair<float, float>>(config["offset"]);
 
             float center_x = static_cast<float>(width) / 2 + offset_x;
             float center_y = static_cast<float>(height) / 2 - offset_y;

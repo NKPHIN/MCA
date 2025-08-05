@@ -111,6 +111,8 @@ namespace mca::cv {
 
         return res;
     }
+
+    typedef std::array<cv::Mat, 3> Mat_C3;
 }
 
 #endif //MAT_HPP
