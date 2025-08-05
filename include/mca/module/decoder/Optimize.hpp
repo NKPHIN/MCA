@@ -9,7 +9,7 @@
 namespace mca::module::decoder {
     class OptimizeModule final : public Module<cv::Mat_C3, cv::Mat_C3, cv::Mat_C3, std::vector<double>, MI::layout_ptr> {
     public:
-        cv::Mat_C3 exec(cv::Mat_C3 recon_frame, cv::Mat_C3 reloc_frame, std::vector<double> theta, MI::layout_ptr layout) override
+        cv::Mat_C3 exec(cv::Mat_C3 recon_frame, cv::Mat_C3 reloc_frame, const std::vector<double> theta, const MI::layout_ptr layout) override
         {
             const auto width = layout->getWidth();
             const auto height = layout->getHeight();

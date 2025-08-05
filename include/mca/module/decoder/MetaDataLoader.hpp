@@ -15,6 +15,8 @@ namespace mca::module::decoder {
             const auto frames = std::any_cast<int>(config["frames"]);
 
             parser::ConfigParser parser(path);
+            if (parser.load() == -1)
+                throw std::runtime_error("Failed to load metadata file: " + std::string(path));
 
             std::vector<std::vector<double>> thetas;
             for (int i = 0; i < frames; i++)
