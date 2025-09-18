@@ -44,7 +44,7 @@ void encoder_workflow(common::Dict config)
     yuv420_writer.exec(output_video, layout, config);
 
     encoder::MetaDataWriter metadata_writer;
-    metadata_writer.exec(thetas, config);
+    metadata_writer.exec(thetas, config, layout);
 
     std::cout << "done" << std::endl;
 }

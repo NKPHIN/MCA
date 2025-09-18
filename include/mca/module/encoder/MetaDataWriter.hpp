@@ -8,25 +8,29 @@
 #include <iomanip>
 
 namespace mca::module::encoder {
-    class MetaDataWriter final : public Module<void, std::vector<std::vector<double>>, common::Dict> {
+    class MetaDataWriter final : public Module<void, std::vector<std::vector<double>>, common::Dict, MI::layout_ptr> {
     public:
 
-        void exec(const std::vector<std::vector<double>> thetas, common::Dict config) override {
+        void exec(const std::vector<std::vector<double>> thetas, common::Dict config, const MI::layout_ptr layout) override {
             const auto frames = std::any_cast<int>(config["frames"]);
 
             const auto path = std::any_cast<std::string>(config["metadata"]);
 
             const auto opt = std::any_cast<int>(config["optimize"]);
 
-            writeBasicData(path);
+            writeBasicData(path, config, layout);
 
             if (opt == 1) writeMetaData(thetas, path, frames);
         }
 
     private:
-        static void writeBasicData(const std::string& path)
+        static void writeBasicData(const std::string& path, common::Dict& config, const MI::layout_ptr& layout)
         {
             auto ofs = std::ofstream(path, std::ios::app);
+            const auto patch = std::any_cast<int>(config["patch"]);
+
+            ofs << "Width : " << layout->getMCAWidth(patch) << std::endl;
+            ofs << "Height : " << layout->getMCAHeight(patch) << std::endl;
             ofs.close();
         }
 
