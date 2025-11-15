@@ -6,10 +6,9 @@
 #define YUV420_HPP
 
 #include <array>
+#include "Mat.hpp"
 
 namespace mca::cv {
-    typedef std::array<cv::Mat, 3> Mat_C3;
-
     inline cv::Mat_C3 Transpose(cv::Mat_C3& src)
     {
         const cv::Mat Y_t = cv::Transpose(src[0]);

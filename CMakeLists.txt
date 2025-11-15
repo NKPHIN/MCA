@@ -18,16 +18,25 @@ add_executable(MCA src/main.cpp
         include/mca/common/cv/cv2.hpp
         include/mca/common/cv/Mat.hpp
         include/mca/common/cv/yuv420.hpp
-        include/mca/proc/preproc.hpp
-        include/mca/proc/postproc.hpp
         include/mca/common/cv/Point.hpp
         include/mca/common/layout/layout.hpp
         include/mca/common/layout/MI.hpp
         include/mca/common/cv/Rect.hpp
         include/mca/common/layout/TSPCLayout.hpp
         include/mca/common/layout/RaytrixLayout.hpp
-        include/mca/proc/crop.hpp
-        include/mca/proc/padding.hpp
-        include/mca/proc/log.hpp
         include/mca/utils/math.hpp
+        include/mca/module/common/Localization.hpp
+        include/mca/module/Encoder/MCAModule.hpp
+        include/mca/module/common/Relocalization.hpp
+        include/mca/module/common/Estimation.hpp
+        include/mca/module/Encoder/Fitting.hpp
+        include/mca/common/pipeline/module.hpp
+        include/mca/module/pipeline.hpp
+        include/mca/module/common/ConfigLoader.hpp
+        include/mca/module/Encoder/YUV420Loader.hpp
+        include/mca/module/common/YUV420Writer.hpp
+        include/mca/module/Encoder/MetaDataWriter.hpp
+        include/mca/module/decoder/YUV420Loader.hpp
+        include/mca/module/decoder/MetaDataLoader.hpp
+        include/mca/module/decoder/Optimize.hpp
 )

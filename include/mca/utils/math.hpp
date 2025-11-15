@@ -8,7 +8,7 @@
 #include <cmath>
 #include "mca/common/cv/cv2.hpp"
 
-namespace mca::proc {
+namespace mca::utils {
     // output: [-180, 180]
     inline double ang(const cv::PointF p1, const cv::PointF p2)
     {
