@@ -7,9 +7,9 @@
 #include "mca/utils/math.hpp"
 
 namespace mca::module::decoder {
-    class OptimizeModule final : public Module<cv::Mat_C3, cv::Mat_C3, cv::Mat_C3, std::vector<double>, MI::layout_ptr> {
+    class OptimizeModule final : public Module<cv::Mat_C3, cv::Mat_C3, cv::Mat_C3, std::vector<double>, std::vector<double>, MI::layout_ptr> {
     public:
-        cv::Mat_C3 exec(cv::Mat_C3 recon_frame, cv::Mat_C3 reloc_frame, const std::vector<double> theta, const MI::layout_ptr layout) override
+        cv::Mat_C3 exec(cv::Mat_C3 recon_frame, cv::Mat_C3 reloc_frame, const std::vector<double> a, const std::vector<double> b, const MI::layout_ptr layout) override
         {
             const auto width = layout->getWidth();
             const auto height = layout->getHeight();
@@ -28,7 +28,7 @@ namespace mca::module::decoder {
                     const int distance = static_cast<int>(utils::dis(closest_center, cv::PointF(fx, fy)));
 
                     int pixel = recon_frame[0].at(y, x);
-                    pixel = std::min(static_cast<int>(pixel * theta[distance]), 255);
+                    pixel = std::min(static_cast<int>(pixel * a[distance] + b[distance]), 255);
 
                     recon_frame[0].set(y, x, static_cast<unsigned char>(pixel));
                 }
