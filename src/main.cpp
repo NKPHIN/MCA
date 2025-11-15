@@ -20,7 +20,7 @@ void encoder_workflow(common::Dict config)
     const auto opt = std::any_cast<int>(config["optimize"]);
 
     std::vector<cv::Mat_C3> output_video;
-    std::vector<std::vector<double>> thetas;
+    std::vector<std::vector<double>> a, b;
     for (int i = 0; i < frames; i++)
     {
         encoder::MCAModule mca;
@@ -37,14 +37,15 @@ void encoder_workflow(common::Dict config)
 
         encoder::FittingModule fitting;
         auto theta = fitting.exec(raw_video[i], reloc_frame, recon_frame, layout);
-        thetas.push_back(theta);
+        a.push_back(theta.first);
+        b.push_back(theta.second);
     }
 
     common::YUV420Writer yuv420_writer;
     yuv420_writer.exec(output_video, layout, config);
 
     encoder::MetaDataWriter metadata_writer;
-    metadata_writer.exec(thetas, config, layout);
+    metadata_writer.exec(a, b, config, layout);
 
     std::cout << "done" << std::endl;
 }
@@ -59,12 +60,14 @@ void decode_workflow(common::Dict config)
     const auto mca_video = yuv420_loader.exec(layout, config);
 
     const auto opt = std::any_cast<int>(config["optimize"]);
-    std::vector<std::vector<double>> thetas;
+    std::vector<std::vector<double>> a, b;
 
     if (opt == 1)
     {
         decoder::MetaDataLoader metadata_loader;
-        thetas = metadata_loader.exec(config);
+        auto [fst, snd] = metadata_loader.exec(config);
+        a = fst;
+        b = snd;
     }
 
     const auto frames = std::any_cast<int>(config["frames"]);
@@ -81,7 +84,7 @@ void decode_workflow(common::Dict config)
         if (opt == 1)
         {
             decoder::OptimizeModule optimize;
-            const auto output_frame = optimize.exec(recon_frame, reloc_frame, thetas[i], layout);
+            const auto output_frame = optimize.exec(recon_frame, reloc_frame, a[i], b[i], layout);
             output_video.push_back(output_frame);
         }
         else output_video.push_back(recon_frame);

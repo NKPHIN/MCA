@@ -6,9 +6,9 @@
 
 
 namespace mca::module::decoder {
-    class MetaDataLoader final : public Module<std::vector<std::vector<double>>, common::Dict> {
+    class MetaDataLoader final : public Module<std::pair<std::vector<std::vector<double>>, std::vector<std::vector<double>>>, common::Dict> {
     public:
-        std::vector<std::vector<double>> exec(common::Dict config) override
+        std::pair<std::vector<std::vector<double>>, std::vector<std::vector<double>>> exec(common::Dict config) override
         {
             const auto path = std::any_cast<std::string>(config["metadata"]);
 
@@ -18,33 +18,44 @@ namespace mca::module::decoder {
             if (parser.load() == -1)
                 throw std::runtime_error("Failed to load metadata file: " + std::string(path));
 
-            std::vector<std::vector<double>> thetas;
+            std::vector<std::vector<double>> a, b;
             for (int i = 0; i < frames; i++)
             {
-                std::vector<double> theta = readMetaData(parser, i);
-                thetas.push_back(theta);
+                auto theta = readMetaData(parser, i);
+                a.push_back(theta.first);
+                b.push_back(theta.second);
             }
 
-            return std::move(thetas);
+            return {a, b};
         }
 
     private:
-        static std::vector<double> readMetaData(mca::parser::ConfigParser& log_parser, const int index)
+        static std::pair<std::vector<double>, std::vector<double>> readMetaData(mca::parser::ConfigParser& log_parser, const int index)
         {
-            std::vector<double> theta;
-            theta.resize(100, 1.0);
+            std::vector<double> a, b;
+            a.resize(100, 1.0);
+            b.resize(100, 1.0);
 
             const std::string data = log_parser.get("Frame" + std::to_string(index));
             std::stringstream stream(data);
             std::string token;
 
-            int start = 0;
+            int start = 0, cnt = 0;
             while (std::getline(stream, token, ',')) { // 以逗号为分隔符
                 if (start == 0)
                     start = std::stoi(token);
-                else theta[start++] = std::stod(token);
+                else if (cnt % 2 == 0 )
+                {
+                    a[start] = std::stod(token);
+                    cnt++;
+                }
+                else
+                {
+                    b[start++] = std::stod(token);
+                    cnt++;
+                }
             }
-            return theta;
+            return {a, b};
         }
     };
 }
