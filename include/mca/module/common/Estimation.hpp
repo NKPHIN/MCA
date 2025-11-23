@@ -8,12 +8,11 @@
 #include "../../utils/math.hpp"
 
 namespace mca::module::common {
-    class EstimationModule final : public Module<cv::Mat_C3, cv::Mat_C3, MI::layout_ptr, Dict> {
+    class EstimationModule final : public Module<cv::Mat_C3, cv::Mat_C3, MI::layout_ptr, Dict, std::vector<std::vector<int>>> {
     public:
-        cv::Mat_C3 exec(const cv::Mat_C3 reloc_frame, const MI::layout_ptr layout, Dict config) override {
+        cv::Mat_C3 exec(const cv::Mat_C3 reloc_frame, const MI::layout_ptr layout, Dict config, const std::vector<std::vector<int>> vecs) override {
 
             const auto opt = std::any_cast<int>(config["optimize"]);
-            const auto vecs = std::any_cast<std::vector<std::vector<int>>>(config["vectors"]);
 
             cv::Mat_C3 recon_frame = estimate(reloc_frame, layout, vecs, opt);
 

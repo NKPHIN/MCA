@@ -6,9 +6,15 @@
 
 
 namespace mca::module::decoder {
-    class MetaDataLoader final : public Module<std::pair<std::vector<std::vector<double>>, std::vector<std::vector<double>>>, common::Dict> {
+    struct MetaDataResult {
+        std::vector<std::vector<std::vector<int>>> all_vecs;
+        std::vector<std::vector<double>> a;
+        std::vector<std::vector<double>> b;
+    };
+
+    class MetaDataLoader final : public Module<MetaDataResult, common::Dict> {
     public:
-        std::pair<std::vector<std::vector<double>>, std::vector<std::vector<double>>> exec(common::Dict config) override
+        MetaDataResult exec(common::Dict config) override
         {
             const auto path = std::any_cast<std::string>(config["metadata"]);
 
@@ -18,18 +24,40 @@ namespace mca::module::decoder {
             if (parser.load() == -1)
                 throw std::runtime_error("Failed to load metadata file: " + std::string(path));
 
+            MetaDataResult res;
+            std::vector<std::vector<std::vector<int>>> all_vecs;
             std::vector<std::vector<double>> a, b;
             for (int i = 0; i < frames; i++)
             {
+                auto vecs = readVectorData(parser, i);
                 auto theta = readMetaData(parser, i);
+                all_vecs.push_back(vecs);
                 a.push_back(theta.first);
                 b.push_back(theta.second);
             }
-
-            return {a, b};
+            res.all_vecs = all_vecs;
+            res.a = a;
+            res.b = b;
+            return res;
         }
 
     private:
+        static std::vector<std::vector<int>> readVectorData(mca::parser::ConfigParser& log_parser, const int index)
+        {
+            std::vector<std::vector<int>> vecs(6, std::vector<int>(2));
+
+            const std::string data = log_parser.get("Vector" + std::to_string(index));
+            std::stringstream stream(data);
+            std::string token;
+
+            int idx = 0;
+            while (std::getline(stream, token, ',')) { // 以逗号为分隔符
+                vecs[idx / 2][idx % 2] = stoi(token);
+                idx++;
+            }
+            return vecs;
+        }
+
         static std::pair<std::vector<double>, std::vector<double>> readMetaData(mca::parser::ConfigParser& log_parser, const int index)
         {
             std::vector<double> a, b;

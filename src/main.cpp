@@ -18,24 +18,50 @@ void encoder_workflow(common::Dict config)
 
     const auto frames = std::any_cast<int>(config["frames"]);
     const auto opt = std::any_cast<int>(config["optimize"]);
+    const auto init_vecs = std::any_cast<std::vector<std::vector<int>>>(config["vectors"]);
 
     std::vector<cv::Mat_C3> output_video;
     std::vector<std::vector<double>> a, b;
+    std::vector<std::vector<std::vector<int>>> all_vecs;
+    const std::vector<int> offsets = {-2, -1, 0, 1, 2};
     for (int i = 0; i < frames; i++)
     {
         encoder::MCAModule mca;
         const auto mca_frame = mca.exec(raw_video[i], layout, config);
         output_video.push_back(mca_frame);
 
-        if (opt == 0) continue;
-
         common::RelocalizationModule reloc;
         const auto reloc_frame = reloc.exec(mca_frame, layout, config);
 
         common::EstimationModule estimation;
-        const auto recon_frame = estimation.exec(reloc_frame, layout, config);
+        auto recon_frame = estimation.exec(reloc_frame, layout, config, init_vecs);
+        int index=0;
+        auto vecs = init_vecs;
+        auto raw_frame = raw_video[i];
+        for (auto& vec : vecs) {
+            double max_psnr = 0;
+            std::vector<int> best_vec = init_vecs[index];
+            for (const int dx : offsets){
+                for (const int dy : offsets) {
+                    vec[0] = init_vecs[index][0] + dx;
+                    vec[1] = init_vecs[index][1] + dy;
+                    recon_frame = estimation.exec(reloc_frame, layout, config, vecs);
+                    double cur_psnr = utils::psnr(raw_frame[0], recon_frame[0]);
+                    if (max_psnr < cur_psnr) {
+                        max_psnr = cur_psnr;
+                        best_vec = vec;
+                    }
+                }
+            }
+            vec = best_vec;
+            index++;
+        }
+        all_vecs.push_back(vecs);
+
+        if (opt == 0) continue;
 
         encoder::FittingModule fitting;
+        recon_frame = estimation.exec(reloc_frame, layout, config, vecs);
         auto theta = fitting.exec(raw_video[i], reloc_frame, recon_frame, layout);
         a.push_back(theta.first);
         b.push_back(theta.second);
@@ -45,7 +71,7 @@ void encoder_workflow(common::Dict config)
     yuv420_writer.exec(output_video, layout, config);
 
     encoder::MetaDataWriter metadata_writer;
-    metadata_writer.exec(a, b, config, layout);
+    metadata_writer.exec(all_vecs, a, b, config, layout);
 
     std::cout << "done" << std::endl;
 }
@@ -59,15 +85,16 @@ void decode_workflow(common::Dict config)
     decoder::YUV420Loader yuv420_loader;
     const auto mca_video = yuv420_loader.exec(layout, config);
 
+    decoder::MetaDataLoader metadata_loader;
+    auto res = metadata_loader.exec(config);
+    auto all_vecs = res.all_vecs;
     const auto opt = std::any_cast<int>(config["optimize"]);
     std::vector<std::vector<double>> a, b;
 
     if (opt == 1)
     {
-        decoder::MetaDataLoader metadata_loader;
-        auto [fst, snd] = metadata_loader.exec(config);
-        a = fst;
-        b = snd;
+        a = res.a;
+        b = res.b;
     }
 
     const auto frames = std::any_cast<int>(config["frames"]);
@@ -79,7 +106,7 @@ void decode_workflow(common::Dict config)
         const auto reloc_frame = reloc.exec(mca_video[i], layout, config);
 
         common::EstimationModule estimation;
-        const auto recon_frame = estimation.exec(reloc_frame, layout, config);
+        const auto recon_frame = estimation.exec(reloc_frame, layout, config, all_vecs[i]);
 
         if (opt == 1)
         {
