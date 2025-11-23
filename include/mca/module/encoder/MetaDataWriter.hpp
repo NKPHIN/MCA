@@ -8,10 +8,10 @@
 #include <iomanip>
 
 namespace mca::module::encoder {
-    class MetaDataWriter final : public Module<void, std::vector<std::vector<double>>, std::vector<std::vector<double>>, common::Dict, MI::layout_ptr> {
+    class MetaDataWriter final : public Module<void, std::vector<std::vector<std::vector<int>>>, std::vector<std::vector<double>>, std::vector<std::vector<double>>, common::Dict, MI::layout_ptr> {
     public:
 
-        void exec(const std::vector<std::vector<double>> a, const std::vector<std::vector<double>> b, common::Dict config, const MI::layout_ptr layout) override {
+        void exec(const std::vector<std::vector<std::vector<int>>> all_vecs, const std::vector<std::vector<double>> a, const std::vector<std::vector<double>> b, common::Dict config, const MI::layout_ptr layout) override {
             const auto frames = std::any_cast<int>(config["frames"]);
 
             const auto path = std::any_cast<std::string>(config["metadata"]);
@@ -19,6 +19,8 @@ namespace mca::module::encoder {
             const auto opt = std::any_cast<int>(config["optimize"]);
 
             writeBasicData(path, config, layout);
+
+            writeVectorData(all_vecs, path, frames);
 
             if (opt == 1) writeMetaData(a, b, path, frames);
         }
@@ -31,6 +33,23 @@ namespace mca::module::encoder {
 
             ofs << "Width : " << layout->getMCAWidth(patch) << std::endl;
             ofs << "Height : " << layout->getMCAHeight(patch) << std::endl;
+            ofs.close();
+        }
+
+        static void writeVectorData(const std::vector<std::vector<std::vector<int>>> & all_vecs_list, const std::string& log_path, const int frames)
+        {
+            auto ofs = std::ofstream(log_path, std::ios::app);
+
+            for (int k=0; k<frames; k++)
+            {
+                const auto& vecs = all_vecs_list[k];
+
+                ofs << "Vector" << k << ":";
+                for (auto vec : vecs) {
+                    ofs << vec[0] << "," << vec[1] << ",";
+                }
+                ofs << std::endl;
+            }
             ofs.close();
         }
 
